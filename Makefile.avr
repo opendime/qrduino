@@ -1,0 +1,35 @@
+all: lcd.hex
+
+.SUFFIXES: .elf .hex .eep .lss .sym .upload .dsm
+
+#CPU=m328p
+CPU=atmega328p
+PORT=/dev/ttyUSB0
+
+XTAL=8000000 #Arduino 3.3v Pro
+CFLAGS=-g -DF_CPU=$(XTAL) -Os -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8
+
+.elf.dsm:
+	avr-objdump --disassemble -S $^ >$@
+
+.c.s:
+	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU) -S $^ -o $@
+
+MAP=-Wl,"-Map" -Wl,"$@.map" -Wl,"--cref"
+
+.c.o:
+	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $^ -o $@ -c
+
+.elf.hex:
+	avr-objcopy -O ihex -R .eeprom $< $@
+
+.hex.upload: 
+	avrdude -F -p $(CPU) -P $(PORT) -c arduino -b 57600 -U $^
+
+lcd.elf: lcd.o qrencode.o
+	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $^ -o $@
+
+qrduino.elf: qrduino.o qrencode.o
+
+clean:
+	rm -rf qrencode *.o qrdunio
