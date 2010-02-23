@@ -1,15 +1,17 @@
+#include "framask.h"
 
-#if 1 // Version 6L
+#if WD == (41) // Version 6L
 #define DATAWID (68)
 #define ECCWID (18)
-#else // Version 7L
+#endif
+
+#if WD == (45) // Version 7L
 #define DATAWID (78)
 #define ECCWID (20)
 #endif
 
 unsigned char strinbuf[(DATAWID+ECCWID)*2];
 
-#include "framask.h"
 
 // greater of 600 or WDB*WD
 #define FBSIZ WDB*WD

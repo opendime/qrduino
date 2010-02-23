@@ -14,3 +14,14 @@ qrencode: qrenc.o qrencode.o
 
 clean:
 	rm -rf qrencode *.o qrdunio
+
+realclean: clean
+	rm -rf *~ \#*
+
+v6L:
+	./dofbit 6 >framask.h
+	make qrencode
+
+v7L:
+	./dofbit 7 >framask.h
+	make qrencode

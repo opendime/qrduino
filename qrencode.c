@@ -13,12 +13,11 @@ static unsigned modnn(unsigned x)
     return x;
 }
 
-static void appendrs(unsigned char *data, unsigned char dsize, unsigned char ecsize)
+static void appendrs(unsigned char *data, unsigned char dsize, unsigned char *ecbuf, unsigned char ecsize)
 {
 #define GFPOLY 0x11d;
     unsigned i, j;
     unsigned char fb;
-    unsigned char *ecbuf = data + dsize;
     // use qrframe as buffer space
     unsigned char *exp = qrframe, *log = &qrframe[256], *genpoly = &qrframe[512];
 
@@ -100,8 +99,8 @@ static void stringtoqr(void)
     // split DATADATAxxxxxx to DATAeccDATAecc
     memmove(&strinbuf[DATAWID+ECCWID], &strinbuf[DATAWID], DATAWID);
     // calculate and append ECC
-    appendrs(strinbuf, DATAWID, ECCWID);
-    appendrs(&strinbuf[DATAWID+ECCWID], DATAWID, ECCWID);
+    appendrs(strinbuf, DATAWID, &strinbuf[DATAWID], ECCWID);
+    appendrs(&strinbuf[DATAWID+ECCWID], DATAWID, &strinbuf[DATAWID*2+ECCWID],ECCWID);
 
 }
 
@@ -122,6 +121,7 @@ static void fillframe(void)
     /* inteleaved data and ecc codes */
     // as is, qrframe could be *c++, but I want to do bits
     for (i = 0; i < ((DATAWID+ECCWID)*2); i++) {
+
         d = strinbuf[(DATAWID+ECCWID) * (i & 1) + (i >> 1)];
         //        fprintf( stderr, "%02x", d );
 

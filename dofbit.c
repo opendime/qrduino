@@ -107,27 +107,23 @@ static const unsigned vpat[] = {
 
 static void putvpat(unsigned char vers)
 {
-    unsigned char x, y, *p, bc;
+    unsigned char x, y, bc;
     unsigned verinfo;
     if (vers < 7)
         return;
     verinfo = vpat[vers - 7];
 
-    p = qrframe + width * (width - 11);
     bc = 17;
     for (x = 0; x < 6; x++)
         for (y = 0; y < 3; y++, bc--)
-            if (1&(bc > 11 ? vers >> (bc - 12) : verinfo >> bc))
-                SETQRBIT( x,y+width-11);
-            else
-                SETFXBIT( x,y+width-11);
-    bc = 17;
-    for (y = 0; y < 6; y++)
-        for (x = 0; x < 3; x++, bc--)
-            if (1&(bc > 11 ? vers >> (bc - 12) : verinfo >> bc))
-                SETQRBIT( x+width-11,y);
-            else
-                SETFXBIT( x+width-11,y);
+            if (1&(bc > 11 ? vers >> (bc - 12) : verinfo >> bc)) {
+                SETQRBIT( 5-x,2-y+width-11);
+                SETQRBIT( 2-y+width-11,5-x);
+            }
+            else {
+                SETFXBIT( 5-x,2-y+width-11);
+                SETFXBIT( 2-y+width-11,5-x);
+            }
 }
 
 void initframe(unsigned char vers)
