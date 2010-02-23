@@ -1,6 +1,5 @@
 #include <string.h>
 
-#include "framask.h"
 #include "qrencode.h"
 
 //========================================================================
@@ -116,12 +115,14 @@ static void fillframe(void)
     unsigned char d, i, j;
     unsigned char x, y, ffdecy, ffgohv;
 
-    //    memcpy_P(qrframe, baseframe, WD * WD);
+    memcpy_P(qrframe, framebase, WDB * WD);
+#if 0
     memset( qrframe, 0 , sizeof(qrframe) );
     for(y=0;y<WD;y++)
         for(x=0;x<WD;x++)
             if( (0x80 >> (x&7) & __LPM(&framebase[ y*6 + (x>>3) ] )) )
                 SETQRBIT(x,y);
+#endif
     //    printframe(qrframe);
     x = y = WD-1;
     ffdecy = 1;             // up, minus

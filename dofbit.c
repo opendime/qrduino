@@ -185,17 +185,47 @@ void initframe(unsigned char vers)
 #include <stdlib.h>
 int main(int argc, char *argv[])
 {
-    int i, j;
-    int v;                      // = atoi(argv[1]);
-    int vers;
-    for (vers = 1; vers < 41; vers++) {
-        initframe(vers);
-        v = vers * 4 + 17;
-        for (j = 0; j < v; j++) {
-            for (i = 0; i < v; i++)
-                printf("%c", QRBIT(i, j) ? '#' : (FIXEDBIT(i, j) ? 'o' : '.'));
-            printf("\n");
+    unsigned char i, j, k, b;
+    unsigned char v;   
+
+    if( argc != 2 )
+        printf( "takes one param, version from 1 to 40\n" );
+    unsigned char vers = atoi(argv[1]);
+    if( vers > 40 ) 
+        return -1;
+
+    initframe(vers);
+    v = vers * 4 + 17;
+
+    printf( "#define WD (%d)\n#define WDB ((WD+7)/8)\n", v ); // width
+
+    printf( "#ifndef __AVR__\n#define PROGMEM\n#define memcpy_P memcpy\n#define __LPM(x) *x\n#else\n"
+            "#include <avr/pgmspace.h>\n#endif\nstatic const unsigned char framebase[] PROGMEM = {\n" );
+    for (j = 0; j < v; j++) {
+        for (i = 0; i < v; i+= 8) {
+            b = 0;
+            for( k = 0 ; k < 8 ; k++ ) {
+                b <<= 1;
+                if( i+k < v )
+                    b |= QRBIT(i+k, j);
+            }                    
+            printf("0x%02x,",  b );
         }
+        printf("\n");
     }
+    printf( "};\n\nstatic const unsigned char framask[] PROGMEM = {\n" );
+    for (j = 0; j < v; j++) {
+        for (i = 0; i < v; i+= 8) {
+            b = 0;
+            for( k = 0 ; k < 8 ; k++ ) {
+                b <<= 1;
+                if( i+k < v )
+                    b |= FIXEDBIT(i+k, j);
+            }                    
+            printf("0x%02x,",  b );
+        }
+        printf("\n");
+    }
+    printf( "};\n" );
     return 0;
 }

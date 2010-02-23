@@ -18,7 +18,7 @@ CFLAGS=-g -DF_CPU=$(XTAL) -Os -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8
 MAP=-Wl,"-Map" -Wl,"$@.map" -Wl,"--cref"
 
 .c.o:
-	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $^ -o $@ -c
+	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $< -o $@ -c
 
 .elf.hex:
 	avr-objcopy -O ihex -R .eeprom $< $@
@@ -28,6 +28,8 @@ MAP=-Wl,"-Map" -Wl,"$@.map" -Wl,"--cref"
 
 lcd.elf: lcd.o qrencode.o
 	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $^ -o $@
+
+qrencode.o: qrencode.h framask.h qrencode.c
 
 qrduino.elf: qrduino.o qrencode.o
 
