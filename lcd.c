@@ -26,7 +26,7 @@ void LcdWrite(unsigned char dc, unsigned char data)
 
 extern unsigned char qrframe[WD * WD];
 extern unsigned char strinbuf[CL];
-extern void qrcode(void);
+extern void qrencode(void);
 #include <string.h>
 main()
 {
@@ -44,7 +44,7 @@ main()
     unsigned i, j, k, t;
     unsigned char b, *c;
     strcpy((char *)strinbuf, "Hello World!");
-    qrcode();
+    qrencode();
     PORTB &= ~0x20;
     t = 0;
     b = 0;

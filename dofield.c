@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
         v = vers * 4 + 17;
         for (j = 0; j < v; j++) {
             for (i = 0; i < v; i++)
-                printf("%02x", qrframe[j * v + i]);
+                printf("%c", qrframe[j * v + i] & 1 ? '#': (qrframe[j * v + i] & 0x80 ? 'o':'.') );
             printf("\n");
         }
     }

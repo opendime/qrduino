@@ -1,11 +1,7 @@
 #include <string.h>
 
 #include "framask.h"
-
-#define WD (41)
-#define CL (172)
-unsigned char qrframe[WD * WD];
-unsigned char strinbuf[CL];
+#include "qrencode.h"
 
 //========================================================================
 // Reed Solomon error correction
@@ -72,7 +68,7 @@ static void appendrs(unsigned char *data, unsigned char dsize, unsigned char ecs
 
 //========================================================================
 // 8 bit data to QR-coded 8 bit data
-
+#include <stdio.h>
 // 136 (-2), 2(68/18)
 static void stringtoqr(void)
 {
@@ -98,6 +94,9 @@ static void stringtoqr(void)
         strinbuf[i++] = 0x11;
     }
 
+    for( i = 0 ; i < 136; i++ )
+        fprintf( stderr, "%02x", strinbuf[i] );
+    fprintf( stderr, "\n" );
     // Level tables
     // { 41,  172, 7, {  36,   64,   96,  112}},
     // 2,4,4,4
@@ -118,11 +117,12 @@ static void fillframe(void)
     unsigned char x, y, ffdecy, ffgohv;
 
     //    memcpy_P(qrframe, baseframe, WD * WD);
+    memset( qrframe, 0 , sizeof(qrframe) );
     for(y=0;y<WD;y++)
-        for(x=0;x<WD;x++) {
-            qrframe[y*WD+x] = 
-                !!(0x80 >> (x&7) & __LPM(&framebase[ y*6 + (x>>3) ] ));
-        }
+        for(x=0;x<WD;x++)
+            if( (0x80 >> (x&7) & __LPM(&framebase[ y*6 + (x>>3) ] )) )
+                SETQRBIT(x,y);
+    //    printframe(qrframe);
     x = y = WD-1;
     ffdecy = 1;             // up, minus
     ffgohv = 1;
@@ -133,7 +133,8 @@ static void fillframe(void)
         d = strinbuf[86 * (i & 1) + (i >> 1)];
         for (j = 0; j < 8; j++, d <<= 1) {
 
-            qrframe[y * WD + x] = !!(0x80 & d);
+            if( 0x80 & d )
+                SETQRBIT(x,y);
 
             do { // find next fill position
                 if (ffgohv)
@@ -166,7 +167,7 @@ static void fillframe(void)
                 }
                 ffgohv = !ffgohv;
 
-            } while ( (0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ] )); 
+            } while ( FIXEDBIT(x,y) );// (0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ] )); 
         }
     }
 }
@@ -178,12 +179,10 @@ static unsigned applymask(unsigned char m)
 {
     unsigned char x, y, t = 0;
     int b = 0;
-    unsigned char *d = qrframe;
 
     for (y = 0; y < WD; y++)
         for (x = 0; x < WD; x++) {
-            d = &qrframe[y * WD + x];
-            if (!((0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ]))) {
+            if (!FIXEDBIT(x,y)) { //((0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ]))) {
                 switch (m) {
                 case 0:
                     t = !((x + y) & 1);
@@ -210,9 +209,10 @@ static unsigned applymask(unsigned char m)
                     t = !((((x * y) % 3) + ((x + y) & 1)) & 1);
                     break;
                 }
-                *d ^= t;
+                if( t )
+                    TOGQRBIT(x,y);
             }
-            if (*d & 1)       // count excess whites v.s blacks
+            if (QRBIT(x,y))       // count excess whites v.s blacks
                 b++;
             else
                 b--;
@@ -255,40 +255,37 @@ static unsigned badruns(unsigned char length)
 static int badcheck()
 {
     unsigned char x, y, h, b;
-    unsigned char *p;
     unsigned thisbad = 0;
 
     // blocks of same color.
-    p = qrframe;
-    for (y = 0; y < WD-1; y++, p++)
-        for (x = 0; x < WD-1; x++, p++)
-            if( (*p && p[1] && p[WD] && p[WD+1]) // all black
-                || !(*p || p[1] || p[WD] || p[WD+1]) ) // all white
+
+    for (y = 0; y < WD-1; y++)
+        for (x = 0; x < WD-1; x++)
+            if( ( QRBIT(x,y) && QRBIT(x+1,y) && QRBIT(x,y+1) && QRBIT(x+1,y+1) ) // all black
+                || !( QRBIT(x,y) || QRBIT(x+1,y) || QRBIT(x,y+1) || QRBIT(x+1,y+1) ) ) // all white
                 thisbad += N2;
+
     // X runs
-    p = qrframe;
     for (y = 0; y < WD; y++) {
         rlens[0] = 0;
         for (h = b = x = 0; x < WD; x++) {
-            if (*p == b)
+            if (QRBIT(x,y) == b)
                 rlens[h]++;
             else
                 rlens[++h] = 1;
-            b = *p++;
+            b = QRBIT(x,y);
         }
         thisbad += badruns(h);
     }
     // Y runs
     for (x = 0; x < WD; x++) {
-        p = qrframe + x;
         rlens[0] = 0;
         for (h = b = y = 0; y < WD; y++) {
-            if (*p == b)
+            if (QRBIT(x,y) == b)
                 rlens[h]++;
             else
                 rlens[++h] = 1;
-            b = *p;
-            p += WD;
+            b = QRBIT(x,y);
         }
         thisbad += badruns(h);
     }
@@ -309,31 +306,30 @@ static const unsigned fmtword[8] = {
 static void addfmt(unsigned char masknum)
 {
     unsigned fmtbits;
-    unsigned char v, i;
+    unsigned char i, lvl = 0;
 
-    fmtbits = fmtword[masknum];
-
-    for (i = 0; i < 8; i++) {
-        v = fmtbits & 1;
-        qrframe[WD * 8 + (WD-1) - i] = v;
-        if (i < 6)
-            qrframe[WD * i + 8] = v;
-        else
-            qrframe[WD * (i + 1) + 8] = v;
-        fmtbits >>= 1;
-    }
-    for (i = 0; i < 7; i++) {
-        v = fmtbits & 1;
-        qrframe[WD * (WD - 7 + i) + 8] = v;
-        if (i == 0)
-            qrframe[WD * 8 + 7] = v;
-        else
-            qrframe[WD * 8 + 6 - i] = v;
-        fmtbits >>= 1;
-    }
+    fmtbits = fmtword[masknum + (lvl << 3)];
+    // low byte
+    for (i = 0; i < 8; i++, fmtbits >>= 1) 
+        if( fmtbits & 1 )  {
+            SETQRBIT(WD - 1 - i ,8);
+            if (i < 6)
+                SETQRBIT(8,i);
+            else
+                SETQRBIT(8,i+1);
+        }
+    // high byte
+    for (i = 0; i < 7; i++, fmtbits >>= 1) 
+        if( fmtbits & 1 ) {
+            SETQRBIT(8,WD-7+i);
+            if (i)
+                SETQRBIT(6-i,8);
+            else
+                SETQRBIT(7,8);
+        }
 }
 
-unsigned char *qrcode()
+void qrencode()
 {
     unsigned mindem = 30000;
     unsigned char best = 0;
@@ -355,6 +351,7 @@ unsigned char *qrcode()
             break;
         }
 #endif
+        fprintf( stderr, "%d\n", badness );
         if (badness < mindem) {
             mindem = badness;
             best = i;
@@ -367,5 +364,4 @@ unsigned char *qrcode()
         applymask(best);
     }
     addfmt(best);		// add in final format bytes
-    return qrframe;
 }
