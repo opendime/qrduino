@@ -1,23 +1,12 @@
 #include "framask.h"
 
-#if WD == (41) // Version 6L
-#define DATAWID (68)
-#define ECCWID (18)
-#endif
-
-#if WD == (45) // Version 7L
-#define DATAWID (78)
-#define ECCWID (20)
-#endif
-
-unsigned char strinbuf[(DATAWID+ECCWID)*2];
-
+unsigned char strinbuf[(DATAWID + ECCWID) * (BLOCKS1 + BLOCKS2) + BLOCKS2];
 
 // greater of 600 or WDB*WD
 #define FBSIZ WDB*WD
-#if FBSIZ < 600
+#if FBSIZ < 800
 #undef FBSIZ
-#define FBSIZ 600
+#define FBSIZ 800
 #endif
 
 unsigned char qrframe[FBSIZ];

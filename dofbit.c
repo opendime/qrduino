@@ -177,6 +177,8 @@ void initframe(unsigned char vers)
         framask[x] |= qrframe[x];
 }
 
+#include "ecctable.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 int main(int argc, char *argv[])
@@ -184,11 +186,27 @@ int main(int argc, char *argv[])
     unsigned char i, j, k, b;
     unsigned char v;   
 
-    if( argc != 2 )
-        printf( "takes one param, version from 1 to 40\n" );
+    if( argc != 3 )
+        printf( "ruires Version ECC-level (1-4)" );
+
+    unsigned ecc = atoi(argv[2]);
+    if( ecc < 1 || ecc > 4 )
+        return -1;
     unsigned char vers = atoi(argv[1]);
     if( vers > 40 ) 
         return -1;
+
+    printf( "#define VERSION (%d)\n", vers );
+    printf( "#define ECCLEVEL (%d)\n", ecc );
+
+    ecc -= 1;
+    ecc *= 4;
+    ecc += (vers - 1) * 16;
+
+    printf( "#define BLOCKS1 (%d)\n", eccblocks[ecc++] );
+    printf( "#define BLOCKS2 (%d)\n", eccblocks[ecc++] );
+    printf( "#define DATAWID (%d)\n", eccblocks[ecc++] );
+    printf( "#define ECCWID (%d)\n", eccblocks[ecc++] );
 
     initframe(vers);
     v = vers * 4 + 17;

@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     int x, y;
     int ret;
 
-    ret = fread(strinbuf, 1, DATAWID*2, stdin);
+    ret = fread(strinbuf, 1, sizeof(strinbuf), stdin);
     strinbuf[ret] = '\0';
 
     //    strcpy((char *)strinbuf, "Hello World!");
