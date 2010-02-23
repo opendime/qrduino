@@ -175,10 +175,10 @@ void initframe(unsigned char vers)
             SETQRBIT(6, 8 + x);
         }
 
-    for (x = 0; x < width * widbytes; x++)
-        framask[x] |= qrframe[x];
     // version block
     putvpat(vers);
+    for (x = 0; x < width * widbytes; x++)
+        framask[x] |= qrframe[x];
 }
 
 #include <stdio.h>

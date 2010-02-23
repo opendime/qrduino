@@ -75,8 +75,8 @@ static void stringtoqr(void)
     unsigned char size;
     size = strlen((char *) strinbuf);
 
-    if (size > 134)
-        size = 134;
+    if (size > DATAWID*2-2)
+        size = DATAWID*2-2;
     i = size;
     strinbuf[i + 1] = 0;
     while (i--) {
@@ -86,25 +86,23 @@ static void stringtoqr(void)
     strinbuf[1] |= size << 4;
     strinbuf[0] = 0x40 | (size >> 4);
     i = size + 2;
-    while (i < 136) {
+    while (i < DATAWID*2) {
         strinbuf[i++] = 0xec;
-        if (i == 136)
+        if (i == DATAWID*2)
             break;
         strinbuf[i++] = 0x11;
     }
 
-    for( i = 0 ; i < 136; i++ )
-        fprintf( stderr, "%02x", strinbuf[i] );
-    fprintf( stderr, "\n" );
     // Level tables
     // { 41,  172, 7, {  36,   64,   96,  112}},
     // 2,4,4,4
     // 18,16,24,28
     // split DATADATAxxxxxx to DATAeccDATAecc
-    memmove(&strinbuf[86], &strinbuf[68], 68);
+    memmove(&strinbuf[DATAWID+ECCWID], &strinbuf[DATAWID], DATAWID);
     // calculate and append ECC
-    appendrs(strinbuf, 68, 18);
-    appendrs(&strinbuf[86], 68, 18);
+    appendrs(strinbuf, DATAWID, ECCWID);
+    appendrs(&strinbuf[DATAWID+ECCWID], DATAWID, ECCWID);
+
 }
 
 //========================================================================
@@ -116,13 +114,6 @@ static void fillframe(void)
     unsigned char x, y, ffdecy, ffgohv;
 
     memcpy_P(qrframe, framebase, WDB * WD);
-#if 0
-    memset( qrframe, 0 , sizeof(qrframe) );
-    for(y=0;y<WD;y++)
-        for(x=0;x<WD;x++)
-            if( (0x80 >> (x&7) & __LPM(&framebase[ y*6 + (x>>3) ] )) )
-                SETQRBIT(x,y);
-#endif
     //    printframe(qrframe);
     x = y = WD-1;
     ffdecy = 1;             // up, minus
@@ -130,12 +121,15 @@ static void fillframe(void)
 
     /* inteleaved data and ecc codes */
     // as is, qrframe could be *c++, but I want to do bits
-    for (i = 0; i < CL; i++) {
-        d = strinbuf[86 * (i & 1) + (i >> 1)];
+    for (i = 0; i < ((DATAWID+ECCWID)*2); i++) {
+        d = strinbuf[(DATAWID+ECCWID) * (i & 1) + (i >> 1)];
+        //        fprintf( stderr, "%02x", d );
+
         for (j = 0; j < 8; j++, d <<= 1) {
 
             if( 0x80 & d )
                 SETQRBIT(x,y);
+            //            fprintf( stderr, "%3d,%-3d\n", x,y );
 
             do { // find next fill position
                 if (ffgohv)
@@ -154,7 +148,7 @@ static void fillframe(void)
                             }
                         }
                     } else {
-                        if (y != 40)
+                        if (y != WD-1)
                             y++;
                         else {
                             x -= 2;
@@ -347,7 +341,7 @@ void qrencode()
         badness *= N4;
         badness += badcheck();
 #if 0 //ndef PUREBAD
-        if (badness < 1850) {   // good enough - masks grow in compute complexity
+        if (badness < WD*WD*5/4) {   // good enough - masks grow in compute complexity
             best = i;
             break;
         }
