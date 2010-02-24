@@ -1,8 +1,4 @@
-#include <stdio.h>
-
-
 #include <string.h>
-
 #include "qrencode.h"
 
 //========================================================================
@@ -23,8 +19,6 @@ static void appendrs(unsigned char *data, unsigned char dsize, unsigned char *ec
     unsigned char fb;
     // use qrframe as buffer space
     unsigned char *exp = qrframe, *log = &qrframe[256], *genpoly = &qrframe[512];
-
-    fprintf( stderr, "%p %p %d %d\n", data, ecbuf, dsize, ecsize );
 
     memset(ecbuf, 0, ecsize);
 
@@ -79,11 +73,12 @@ static void stringtoqr(void)
     size = strlen((char *) strinbuf);
 
     max = DATAWID * (BLOCKS1 + BLOCKS2) + BLOCKS2;
-    if (size >= max ) {
-        size = max;
+    if (size >= max - 2 ) {
+        size = max - 2;
         if( VERSION > 9 )
             size--;
     }
+
     i = size;
     if( VERSION > 9 ) {
         strinbuf[i + 2] = 0;
@@ -162,11 +157,9 @@ static void fillframe(void)
     c = strinbuf;
     for (i = 0; i < ((DATAWID + ECCWID) * (BLOCKS1 + BLOCKS2) + BLOCKS2); i++) {
         d = *c++;
-                fprintf( stderr, "%02x", d );
         for (j = 0; j < 8; j++, d <<= 1) {
             if (0x80 & d)
                 SETQRBIT(x, y);
-            //            fprintf( stderr, "%3d,%-3d\n", x,y );
             do {                // find next fill position
                 if (ffgohv)
                     x--;
@@ -197,7 +190,7 @@ static void fillframe(void)
                     }
                 }
                 ffgohv = !ffgohv;
-            } while (FIXEDBIT(x, y));   // (0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ] )); 
+            } while (FIXEDBIT(x, y));
         }
     }
 }
@@ -211,7 +204,7 @@ static unsigned applymask(unsigned char m)
 
     for (y = 0; y < WD; y++)
         for (x = 0; x < WD; x++) {
-            if (!FIXEDBIT(x, y)) {      //((0x80 >> (x&7)) & __LPM(&framask[ y*6 + (x>>3) ]))) {
+            if (!FIXEDBIT(x, y)) {
                 switch (m) {
                 case 0:
                     t = !((x + y) & 1);
@@ -377,7 +370,6 @@ void qrencode()
             break;
         }
 #endif
-        fprintf(stderr, "%d\n", badness);
         if (badness < mindem) {
             mindem = badness;
             best = i;
