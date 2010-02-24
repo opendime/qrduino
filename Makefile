@@ -6,7 +6,7 @@ all: dofbit qrencode
 
 qrduino: qrduino.o qrencode.o
 
-dofbit: dofbit.o
+dofbit: dofbit.o qrframe.o
 
 qrenc.o qrencode.o: qrencode.h framask.h
 
