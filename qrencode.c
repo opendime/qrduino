@@ -139,6 +139,24 @@ static void stringtoqr(void)
 
 //========================================================================
 // Frame data insert following the path rules
+static unsigned char ismasked(unsigned char x,unsigned char y)  {
+    unsigned bt;
+    if( x > y ) {
+        bt = x;
+        x = y;
+        y = bt;
+    }
+    bt = y;
+    // bt += y*y;
+    unsigned s = 1;
+    while( y-- ) {
+        bt += s;
+        s += 2;
+    }
+    bt >>= 1;
+    bt += x;
+    return (framask[bt >> 3] >> (7-(bt&7))) & 1;
+}
 
 static void fillframe(void)
 {
@@ -190,7 +208,7 @@ static void fillframe(void)
                     }
                 }
                 ffgohv = !ffgohv;
-            } while (FIXEDBIT(x, y));
+            } while (ismasked(x, y));
         }
     }
 }
@@ -204,7 +222,7 @@ static unsigned applymask(unsigned char m)
 
     for (y = 0; y < WD; y++)
         for (x = 0; x < WD; x++) {
-            if (!FIXEDBIT(x, y)) {
+            if (!ismasked(x, y)) {
                 switch (m) {
                 case 0:
                     t = !((x + y) & 1);

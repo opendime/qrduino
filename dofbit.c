@@ -1,7 +1,7 @@
 #include <string.h>
 
-unsigned char qrframe[4096];
-unsigned char framask[4096];
+unsigned char qrframe[177*177];
+unsigned char framask[177*89];
 unsigned char qrwidth, qrwidbytes;
 
 #include "qrbits.h"
@@ -15,8 +15,8 @@ void initframe(unsigned char vers);
 #include <stdlib.h>
 int main(int argc, char *argv[])
 {
-    unsigned char i, j, k, b;
-    unsigned char v;   
+    unsigned char i, j, b;
+    unsigned char v,w;   
 
     if( argc != 3 )
         printf( "ruires Version ECC-level (1-4)" );
@@ -48,31 +48,32 @@ int main(int argc, char *argv[])
 
     printf( "#ifndef __AVR__\n#define PROGMEM\n#define memcpy_P memcpy\n#define __LPM(x) *x\n#else\n"
             "#include <avr/pgmspace.h>\n#endif\nstatic const unsigned char framebase[] PROGMEM = {\n" );
+
+    w = (v+7)>>3;
     for (j = 0; j < v; j++) {
         for (i = 0; i < v; i+= 8) {
-            b = 0;
-            for( k = 0 ; k < 8 ; k++ ) {
-                b <<= 1;
-                if( i+k < v )
-                    b |= QRBIT(i+k, j);
-            }                    
+            b = qrframe[j*w+(i>>3)];
             printf("0x%02x,",  b );
         }
         printf("\n");
     }
     printf( "};\n\nstatic const unsigned char framask[] PROGMEM = {\n" );
+    unsigned tt, tri = v*(v+1)/2;
+    tri = (tri+7)/8;
+    for( tt = 0; tt < tri; tt++ ) {
+        if( !(tt % w) )
+            printf("\n");
+        printf("0x%02x,",  framask[tt] );
+    }
+    printf( "\n};\n" );
+#if 0
     for (j = 0; j < v; j++) {
-        for (i = 0; i < v; i+= 8) {
-            b = 0;
-            for( k = 0 ; k < 8 ; k++ ) {
-                b <<= 1;
-                if( i+k < v )
-                    b |= FIXEDBIT(i+k, j);
-            }                    
-            printf("0x%02x,",  b );
+        for (i = 0; i < v; i++) {
+            printf(" %d",  FIXEDBIT(j,i) );
         }
         printf("\n");
     }
-    printf( "};\n" );
+#endif
+
     return 0;
 }

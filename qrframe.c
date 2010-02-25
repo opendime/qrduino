@@ -6,6 +6,22 @@ extern unsigned char qrwidth, qrwidbytes;
 
 #include "qrbits.h"
 
+static void setmask(unsigned char x,unsigned char y)  {
+    unsigned bt;
+    if( x > y ) {
+        bt = x;
+        x = y;
+        y = bt;
+    }
+    // y*y = 1+3+5...
+    bt = y;
+    bt *= y;
+    bt += y;
+    bt >>= 1;
+    bt += x;
+    framask[bt >> 3] |= 0x80 >> (bt & 7);
+}
+
 static void putfind()
 {
     unsigned char j, i, k, t;
@@ -23,16 +39,12 @@ static void putfind()
             SETQRBIT(i + 6, k + j);
             SETQRBIT(i + j + 1, k + 6);
         }
-        // the outer wall makes this mask unnecessary
-
-#ifndef QUICK
         for (j = 1; j < 5; j++) {
-            SETFXBIT(i + j, k + 1);
-            SETFXBIT(i + 1, k + j + 1);
-            SETFXBIT(i + 5, k + j);
-            SETFXBIT(i + j + 1, k + 5);
+            setmask(i + j, k + 1);
+            setmask(i + 1, k + j + 1);
+            setmask(i + 5, k + j);
+            setmask(i + j + 1, k + 5);
         }
-#endif
         for (j = 2; j < 4; j++) {
             SETQRBIT(i + j, k + 2);
             SETQRBIT(i + 2, k + j + 1);
@@ -53,14 +65,12 @@ static void putalign(int x, int y)
         SETQRBIT(x + 2, y + j);
         SETQRBIT(x + j + 1, y + 2);
     }
-#ifndef QUICK
     for( j = 0 ; j < 2 ; j++ ) {
-        SETFXBIT(x-1, y+j);
-        SETFXBIT(x+1, y-j);
-        SETFXBIT(x-j, y-1);
-        SETFXBIT(x+j, y+1);
+        setmask(x-1, y+j);
+        setmask(x+1, y-j);
+        setmask(x-j, y-1);
+        setmask(x+j, y+1);
     }
-#endif
 }
 
 static const unsigned char adelta[41] = {
@@ -116,8 +126,8 @@ static void putvpat(unsigned char vers)
                 SETQRBIT( 2-y+qrwidth-11,5-x);
             }
             else {
-                SETFXBIT( 5-x,2-y+qrwidth-11);
-                SETFXBIT( 2-y+qrwidth-11,5-x);
+                setmask( 5-x,2-y+qrwidth-11);
+                setmask( 2-y+qrwidth-11,5-x);
             }
 }
 
@@ -138,29 +148,29 @@ void initframe(unsigned char vers)
     SETQRBIT(8, qrwidth - 8);
     // timing gap - masks only
     for (y = 0; y < 7; y++) {
-        SETFXBIT(7, y);
-        SETFXBIT(qrwidth - 8, y);
-        SETFXBIT(7, y + qrwidth - 7);
+        setmask(7, y);
+        setmask(qrwidth - 8, y);
+        setmask(7, y + qrwidth - 7);
     }
     for (x = 0; x < 8; x++) {
-        SETFXBIT(x, 7);
-        SETFXBIT(x + qrwidth - 8, 7);
-        SETFXBIT(x, qrwidth - 8);
+        setmask(x, 7);
+        setmask(x + qrwidth - 8, 7);
+        setmask(x, qrwidth - 8);
     }
     // reserve mask-format area
     for (x = 0; x < 9; x++)
-        SETFXBIT(x, 8);
+        setmask(x, 8);
     for (x = 0; x < 8; x++) {
-        SETFXBIT(x + qrwidth - 8, 8);
-        SETFXBIT(8, x);
+        setmask(x + qrwidth - 8, 8);
+        setmask(8, x);
     }
     for (y = 0; y < 7; y++)
-        SETFXBIT(8, y + qrwidth - 7);
+        setmask(8, y + qrwidth - 7);
     // timing
     for (x = 0; x < qrwidth - 14; x++)
         if (x & 1) {
-            SETFXBIT(8 + x, 6);
-            SETFXBIT(6, 8 + x);
+            setmask(8 + x, 6);
+            setmask(6, 8 + x);
         } else {
             SETQRBIT(8 + x, 6);
             SETQRBIT(6, 8 + x);
@@ -168,6 +178,8 @@ void initframe(unsigned char vers)
 
     // version block
     putvpat(vers);
-    for (x = 0; x < qrwidth * qrwidbytes; x++)
-        framask[x] |= qrframe[x];
+    for( y = 0 ; y < qrwidth; y++ )
+        for (x = 0; x <= y; x++)
+            if( QRBIT(x,y) )
+                setmask(x,y);
 }
