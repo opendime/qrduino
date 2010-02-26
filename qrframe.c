@@ -5,14 +5,15 @@ unsigned char *framebase;
 unsigned char *framask;
 unsigned char *rlens;
 unsigned char VERSION;
-unsigned char WD, WDB; // filled in from verison by initframe
+unsigned char WD, WDB;          // filled in from verison by initframe
 
 #define QRBIT(x,y) ( ( framebase[((x)>>3) + (y) * WDB] >> (7-((x) & 7 ))) & 1 )
 #define SETQRBIT(x,y) framebase[((x)>>3) + (y) * WDB] |= 0x80 >> ((x) & 7)
 
-static void setmask(unsigned char x,unsigned char y)  {
+static void setmask(unsigned char x, unsigned char y)
+{
     unsigned bt;
-    if( x > y ) {
+    if (x > y) {
         bt = x;
         x = y;
         y = bt;
@@ -69,11 +70,11 @@ static void putalign(int x, int y)
         SETQRBIT(x + 2, y + j);
         SETQRBIT(x + j + 1, y + 2);
     }
-    for( j = 0 ; j < 2 ; j++ ) {
-        setmask(x-1, y+j);
-        setmask(x+1, y-j);
-        setmask(x-j, y-1);
-        setmask(x+j, y+1);
+    for (j = 0; j < 2; j++) {
+        setmask(x - 1, y + j);
+        setmask(x + 1, y - j);
+        setmask(x - j, y - 1);
+        setmask(x + j, y + 1);
     }
 }
 
@@ -126,13 +127,12 @@ static void putvpat(void)
     bc = 17;
     for (x = 0; x < 6; x++)
         for (y = 0; y < 3; y++, bc--)
-            if (1&(bc > 11 ? vers >> (bc - 12) : verinfo >> bc)) {
-                SETQRBIT( 5-x,2-y+WD-11);
-                SETQRBIT( 2-y+WD-11,5-x);
-            }
-            else {
-                setmask( 5-x,2-y+WD-11);
-                setmask( 2-y+WD-11,5-x);
+            if (1 & (bc > 11 ? vers >> (bc - 12) : verinfo >> bc)) {
+                SETQRBIT(5 - x, 2 - y + WD - 11);
+                SETQRBIT(2 - y + WD - 11, 5 - x);
+            } else {
+                setmask(5 - x, 2 - y + WD - 11);
+                setmask(2 - y + WD - 11, 5 - x);
             }
 }
 
@@ -140,9 +140,9 @@ void initframe()
 {
     unsigned x, y;
 
-    framebase = calloc(WDB*WD,1);
-    framask = calloc(((WD*(WD+1)/2)+7)/8,1);
-    rlens = malloc(WD+1);
+    framebase = calloc(WDB * WD, 1);
+    framask = calloc(((WD * (WD + 1) / 2) + 7) / 8, 1);
+    rlens = malloc(WD + 1);
     // finders
     putfind();
     // alignment blocks
@@ -181,17 +181,17 @@ void initframe()
 
     // version block
     putvpat();
-    for( y = 0 ; y < WD; y++ )
+    for (y = 0; y < WD; y++)
         for (x = 0; x <= y; x++)
-            if( QRBIT(x,y) )
-                setmask(x,y);
+            if (QRBIT(x, y))
+                setmask(x, y);
 }
 
 unsigned char *strinbuf;
 unsigned char *qrframe;
 unsigned char ECCLEVEL;
 unsigned char neccblk1;
-unsigned char neccblk2 ;
+unsigned char neccblk2;
 unsigned char datablkw;
 unsigned char eccblkwid;
 
@@ -205,24 +205,27 @@ unsigned char eccblkwid;
 
 #include "ecctable.h"
 
-unsigned initecc(unsigned char ecc, unsigned char vers) {
+unsigned initecc(unsigned char ecc, unsigned char vers)
+{
     VERSION = vers;
     WD = 17 + 4 * vers;
     WDB = (WD + 7) / 8;
 
-    unsigned fsz = WD*WDB;
-    if( fsz < 768 ) // for ECC math buffers
+    unsigned fsz = WD * WDB;
+    if (fsz < 768)              // for ECC math buffers
         fsz = 768;
-    qrframe = malloc( fsz );
+    qrframe = malloc(fsz);
 
     ECCLEVEL = ecc;
     unsigned eccindex = (ecc - 1) * 4 + (vers - 1) * 16;
 
-    neccblk1 = eccblocks[eccindex++] ;
-    neccblk2 = eccblocks[eccindex++] ;
-    datablkw = eccblocks[eccindex++] ;
-    eccblkwid = eccblocks[eccindex++] ;
+    neccblk1 = eccblocks[eccindex++];
+    neccblk2 = eccblocks[eccindex++];
+    datablkw = eccblocks[eccindex++];
+    eccblkwid = eccblocks[eccindex++];
 
-    strinbuf = malloc(WD*WDB);//(datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2);
-    return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2; //-3 if vers > 9!
+    if (fsz < datablkw + (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2)
+        fsz = datablkw + (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2;
+    strinbuf = malloc(fsz);
+    return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2;     //-3 if vers > 9!
 }

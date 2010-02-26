@@ -36,9 +36,7 @@ static void appendrs(unsigned char *data, unsigned char dsize, unsigned char *ec
     unsigned i, j;
     unsigned char fb;
     // use qrframe as buffer space
-    unsigned char *exp = qrframe, *log = &qrframe[256], *genpoly = &qrframe[512];
-
-    memset(ecbuf, 0, ecsize);
+    unsigned char *exp = qrframe, *log = &qrframe[256], *genpoly = &qrframe[512], *iecbuf;
 
     log[0] = 255;
     exp[255] = 0;
@@ -67,18 +65,22 @@ static void appendrs(unsigned char *data, unsigned char dsize, unsigned char *ec
     for (i = 0; i <= ecsize; i++)
         genpoly[i] = log[genpoly[i]];
 
+    memset(ecbuf, 0, ecsize);
+    iecbuf = ecbuf;
     for (i = 0; i < dsize; i++) {
-        fb = log[data[i] ^ ecbuf[0]];
+        fb = log[data[i] ^ iecbuf[0]];
         if (fb != 255)          /* fb term is non-zero */
             for (j = 1; j < ecsize; j++)
-                ecbuf[j] ^= exp[modnn(fb + genpoly[ecsize - j])];
-        /* Shift */
-        memmove(&ecbuf[0], &ecbuf[1], ecsize - 1);
+                iecbuf[j] ^= exp[modnn(fb + genpoly[ecsize - j])];
+        // Shift - use bigger buffer and move pointer instead of:
+        // memmove(&iecbuf[0], &iecbuf[1], ecsize - 1);
+        iecbuf++;
         if (fb != 255)
-            ecbuf[ecsize - 1] = exp[modnn(fb + genpoly[0])];
+            iecbuf[ecsize - 1] = exp[modnn(fb + genpoly[0])];
         else
-            ecbuf[ecsize - 1] = 0;
+            iecbuf[ecsize - 1] = 0;
     }
+    memmove(ecbuf, iecbuf, ecsize);
 }
 
 //========================================================================
@@ -163,12 +165,15 @@ static unsigned char ismasked(unsigned char x, unsigned char y)
         y = bt;
     }
     bt = y;
+    bt += y * y;
+#if 0
     // bt += y*y;
     unsigned s = 1;
     while (y--) {
         bt += s;
         s += 2;
     }
+#endif
     bt >>= 1;
     bt += x;
     return (__LPM(&framask[bt >> 3]) >> (7 - (bt & 7))) & 1;
@@ -229,33 +234,22 @@ static void fillframe(void)
 
 //========================================================================
 // Masking 
-static unsigned applymask(unsigned char m)
+static void applymask(unsigned char m)
 {
     unsigned char x, y, r3x, r3y;
-    int b = 0;
 
     switch (m) {
     case 0:
         for (y = 0; y < WD; y++)
-            for (x = 0; x < WD; x++) {
+            for (x = 0; x < WD; x++)
                 if (!((x + y) & 1) && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
-            }
         break;
     case 1:
         for (y = 0; y < WD; y++)
-            for (x = 0; x < WD; x++) {
+            for (x = 0; x < WD; x++)
                 if (!(y & 1) && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
-            }
         break;
     case 2:
         for (y = 0; y < WD; y++)
@@ -264,10 +258,6 @@ static unsigned applymask(unsigned char m)
                     r3x = 0;
                 if (!r3x && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         break;
     case 3:
@@ -279,26 +269,18 @@ static unsigned applymask(unsigned char m)
                     r3x = 0;
                 if (!r3x && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         }
         break;
     case 4:
         for (y = 0; y < WD; y++)
-            for (r3x = 0, r3y = ((y>>1)&1), x = 0; x < WD; x++, r3x++) {
+            for (r3x = 0, r3y = ((y >> 1) & 1), x = 0; x < WD; x++, r3x++) {
                 if (r3x == 3) {
                     r3x = 0;
                     r3y = !r3y;
                 }
                 if (!r3y && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         break;
     case 5:
@@ -310,10 +292,6 @@ static unsigned applymask(unsigned char m)
                     r3x = 0;
                 if (!((x & y & 1) + !(!r3x | !r3y)) && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         }
         break;
@@ -326,10 +304,6 @@ static unsigned applymask(unsigned char m)
                     r3x = 0;
                 if (!(((x & y & 1) + (r3x && (r3x == r3y))) & 1) && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         }
         break;
@@ -342,19 +316,11 @@ static unsigned applymask(unsigned char m)
                     r3x = 0;
                 if (!(((r3x && (r3x == r3y)) + ((x + y) & 1)) & 1) && !ismasked(x, y))
                     TOGQRBIT(x, y);
-                if (QRBIT(x, y))        // count excess whites v.s blacks
-                    b++;
-                else
-                    b--;
             }
         }
         break;
     }
-
-    if (b < 0)
-        b = -b;
-
-    return b;
+    return;
 }
 
 // Badness coefficients.
@@ -387,11 +353,11 @@ static unsigned badruns(unsigned char length)
 
 static int badcheck()
 {
-    unsigned char x, y, h, b;
+    unsigned char x, y, h, b, b1;
     unsigned thisbad = 0;
+    int bw = 0;
 
     // blocks of same color.
-
     for (y = 0; y < WD - 1; y++)
         for (x = 0; x < WD - 1; x++)
             if ((QRBIT(x, y) && QRBIT(x + 1, y) && QRBIT(x, y + 1) && QRBIT(x + 1, y + 1))      // all black
@@ -402,23 +368,37 @@ static int badcheck()
     for (y = 0; y < WD; y++) {
         rlens[0] = 0;
         for (h = b = x = 0; x < WD; x++) {
-            if (QRBIT(x, y) == b)
+            if ((b1 = QRBIT(x, y)) == b)
                 rlens[h]++;
             else
                 rlens[++h] = 1;
-            b = QRBIT(x, y);
+            b = b1;
+            bw += b ? 1 : -1;
         }
         thisbad += badruns(h);
     }
+
+    // black/white imbalance
+    if (bw < 0)
+        bw = -bw;
+
+    unsigned long big = bw;
+    unsigned count = 0;
+    big += big << 2;
+    big <<= 1;
+    while (big > WD * WD)
+        big -= WD * WD, count++;
+    thisbad += count * N4;
+
     // Y runs
     for (x = 0; x < WD; x++) {
         rlens[0] = 0;
         for (h = b = y = 0; y < WD; y++) {
-            if (QRBIT(x, y) == b)
+            if ((b1 = QRBIT(x, y)) == b)
                 rlens[h]++;
             else
                 rlens[++h] = 1;
-            b = QRBIT(x, y);
+            b = b1;
         }
         thisbad += badruns(h);
     }
@@ -471,11 +451,8 @@ void qrencode()
     fillframe();                // Inisde loop to avoid having separate mask buffer
     memcpy(strinbuf, qrframe, WD * WDB);
     for (i = 0; i < 8; i++) {
-        badness = applymask(i); // returns black-white imbalance
-        badness *= 10;
-        badness /= (WD * WD);
-        badness *= N4;
-        badness += badcheck();
+        applymask(i);           // returns black-white imbalance
+        badness = badcheck();
 #if 0                           //ndef PUREBAD
         if (badness < WD * WD * 5 / 4) {        // good enough - masks grow in compute complexity
             best = i;
