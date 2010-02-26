@@ -223,6 +223,6 @@ unsigned initecc(unsigned char ecc, unsigned char vers) {
     datablkw = eccblocks[eccindex++] ;
     eccblkwid = eccblocks[eccindex++] ;
 
-    strinbuf = malloc((datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2);
+    strinbuf = malloc(WD*WDB);//(datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2);
     return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2; //-3 if vers > 9!
 }

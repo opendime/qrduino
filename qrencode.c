@@ -393,9 +393,9 @@ void qrencode()
     unsigned badness;
 
     stringtoqr();
-
+    fillframe();            // Inisde loop to avoid having separate mask buffer
+    memcpy(strinbuf,qrframe,WD*WDB);
     for (i = 0; i < 8; i++) {
-        fillframe();            // Inisde loop to avoid having separate mask buffer
         badness = applymask(i); // returns black-white imbalance
         badness *= 10;
         badness /= (WD * WD);
@@ -413,10 +413,9 @@ void qrencode()
         }
         if (best == 7)
             break;              // don't increment i to avoid redoing mask
+        memcpy(qrframe,strinbuf,WD*WDB); // reset filled frame
     }
-    if (best != i) {            // redo best mask - none good enough, last wasn't best
-        fillframe();
+    if (best != i)            // redo best mask - none good enough, last wasn't best
         applymask(best);
-    }
     addfmt(best);               // add in final format bytes
 }

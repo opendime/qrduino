@@ -16,10 +16,3 @@ clean:
 realclean: clean
 	rm -rf *~ \#*
 
-v6L:
-	./dofbit 6 1 >framask.h
-	make qrencode
-
-v7L:
-	./dofbit 7 1 >framask.h
-	make qrencode

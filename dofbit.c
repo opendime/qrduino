@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     printf( "const unsigned char ECCLEVEL = %d;\n", ECCLEVEL );
     printf( "const unsigned char WD = %d;\n", WD );
     printf( "const unsigned char WDB = %d;\n", WDB );
-    printf( "unsigned char strinbuf[%d];\n", (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2 );
+    printf( "unsigned char strinbuf[%d];\n", WD*WDB );//(datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2 );
     printf( "unsigned char qrframe[%d];\n", WD*WDB < 600? 600 : WD*WDB );
     printf( "unsigned char rlens[%d];\n", WD+1 );
 

@@ -9,7 +9,7 @@ CPU=atmega328p
 PORT=/dev/ttyUSB0
 
 XTAL=8000000 #Arduino 3.3v Pro
-CFLAGS=-g -DF_CPU=$(XTAL) -Os -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8
+CFLAGS=-g -DF_CPU=$(XTAL) -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8
 
 .elf.dsm:
 	avr-objdump --disassemble -S $^ >$@
@@ -37,7 +37,7 @@ clean:
 	rm -rf qrencode *.o qrdunio dofbit qrv6l1.*
 
 qrv6l1.c: dofbit
-	./dofbit 6 1 >qrv6l1.c
+	./dofbit 7 1 >qrv6l1.c
 
 dofbit: dofbit.c qrframe.c
 	$(HOSTGCC) $^ -o $@
