@@ -1,10 +1,3 @@
-#ifndef __AVR__
-#define PROGMEM
-#define memcpy_P memcpy
-#define __LPM(x) x
-#else
-#include <avr/pgmspace.h>
-#endif
 static const unsigned char eccblocks[] PROGMEM = {
    1, 0, 19,  7,   1, 0, 16, 10,   1, 0, 13, 13,   1, 0,  9, 17,
    1, 0, 34, 10,   1, 0, 28, 16,   1, 0, 22, 22,   1, 0, 16, 28,

@@ -1,25 +1,36 @@
 #include <string.h>
 
-unsigned char qrframe[177*177];
-unsigned char framask[177*89];
-unsigned char qrwidth, qrwidbytes;
+extern void initframe(void);
+extern void initecc(unsigned char, unsigned char);
+extern unsigned char neccblk1;
+extern unsigned char neccblk2 ;
+extern unsigned char datablkw;
+extern unsigned char eccblkwid;
+extern unsigned char VERSION;
+extern unsigned char ECCLEVEL;
+extern unsigned char WD, WDB; // filled in from verison by initframe
+extern unsigned char *framebase;
+extern unsigned char *framask;
 
-#include "qrbits.h"
-
-void initframe(unsigned char vers);
-
+#ifndef __AVR__
+#define PROGMEM
+#define memcpy_P memcpy
+#define __LPM(x) x
+#else
+#include <avr/pgmspace.h>
+#endif
 
 #include "ecctable.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
 int main(int argc, char *argv[])
 {
     unsigned char i, j, b;
-    unsigned char v,w;   
 
     if( argc != 3 )
-        printf( "ruires Version ECC-level (1-4)" );
+        printf( "params: Version (1-40) ECC-level (1-4)" );
 
     unsigned ecc = atoi(argv[2]);
     if( ecc < 1 || ecc > 4 )
@@ -28,52 +39,41 @@ int main(int argc, char *argv[])
     if( vers > 40 ) 
         return -1;
 
-    printf( "#define VERSION (%d)\n", vers );
-    printf( "#define ECCLEVEL (%d)\n", ecc );
+    initecc(ecc, vers);
 
-    ecc -= 1;
-    ecc *= 4;
-    ecc += (vers - 1) * 16;
-
-    printf( "#define BLOCKS1 (%d)\n", eccblocks[ecc++] );
-    printf( "#define BLOCKS2 (%d)\n", eccblocks[ecc++] );
-    printf( "#define DATAWID (%d)\n", eccblocks[ecc++] );
-    printf( "#define ECCWID (%d)\n", eccblocks[ecc++] );
-
-    initframe(vers);
-    v = vers * 4 + 17;
-
-    printf( "#define WD (%d)\n#define WDB ((WD+7)/8)\n", v ); // width
-    printf( "static const unsigned char qrwidbytes = ((WD+7)/8);\n" );
+    printf( "const unsigned char neccblk1 = %d;\n", neccblk1 );
+    printf( "const unsigned char neccblk2 = %d;\n", neccblk2  );
+    printf( "const unsigned char datablkw = %d;\n", datablkw );
+    printf( "const unsigned char eccblkwid = %d;\n", eccblkwid );
+    printf( "const unsigned char VERSION = %d;\n", VERSION );
+    printf( "const unsigned char ECCLEVEL = %d;\n", ECCLEVEL );
+    printf( "const unsigned char WD = %d;\n", WD );
+    printf( "const unsigned char WDB = %d;\n", WDB );
+    printf( "unsigned char strinbuf[%d];\n", (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2 );
+    printf( "unsigned char qrframe[%d];\n", WD*WDB < 600? 600 : WD*WDB );
+    printf( "unsigned char rlens[%d];\n", WD+1 );
 
     printf( "#ifndef __AVR__\n#define PROGMEM\n#define memcpy_P memcpy\n#define __LPM(x) *x\n#else\n"
-            "#include <avr/pgmspace.h>\n#endif\nstatic const unsigned char framebase[] PROGMEM = {\n" );
+            "#include <avr/pgmspace.h>\n#endif\nconst unsigned char framebase[] PROGMEM = {\n" );
 
-    w = (v+7)>>3;
-    for (j = 0; j < v; j++) {
-        for (i = 0; i < v; i+= 8) {
-            b = qrframe[j*w+(i>>3)];
+    initframe();
+
+    for (j = 0; j < WD; j++) {
+        for (i = 0; i < WDB; i++) {
+            b = framebase[j*WDB+i];
             printf("0x%02x,",  b );
         }
         printf("\n");
     }
-    printf( "};\n\nstatic const unsigned char framask[] PROGMEM = {\n" );
-    unsigned tt, tri = v*(v+1)/2;
+    printf( "};\n\nconst unsigned char framask[] PROGMEM = {" );
+    unsigned tt, tri = WD*(WD+1)/2;
     tri = (tri+7)/8;
     for( tt = 0; tt < tri; tt++ ) {
-        if( !(tt % w) )
+        if( !(tt % WDB) )
             printf("\n");
         printf("0x%02x,",  framask[tt] );
     }
     printf( "\n};\n" );
-#if 0
-    for (j = 0; j < v; j++) {
-        for (i = 0; i < v; i++) {
-            printf(" %d",  FIXEDBIT(j,i) );
-        }
-        printf("\n");
-    }
-#endif
 
     return 0;
 }

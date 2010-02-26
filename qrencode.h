@@ -1,16 +1,11 @@
-#include "framask.h"
-
-unsigned char strinbuf[(DATAWID + ECCWID) * (BLOCKS1 + BLOCKS2) + BLOCKS2];
-
-// greater of 600 or WDB*WD
-#define FBSIZ WDB*WD
-#if FBSIZ < 800
-#undef FBSIZ
-#define FBSIZ 800
-#endif
-
-unsigned char qrframe[FBSIZ];
+extern unsigned char  WD, WDB;
+extern unsigned char *strinbuf;
+extern unsigned char *qrframe;
 
 #include "qrbits.h"
+
+//qrframe only
+unsigned initecc(unsigned char level,unsigned char version);
+ void initframe(void);
 
 void qrencode(void);

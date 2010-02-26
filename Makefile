@@ -2,15 +2,13 @@ CFLAGS:=-Wall -g -Os
 #CC=avr-gcc -mmcu=atmega328p
 CC=gcc
 
-all: dofbit qrencode
+all: qrencode
 
 qrduino: qrduino.o qrencode.o
 
 dofbit: dofbit.o qrframe.o
 
-qrenc.o qrencode.o: qrencode.h framask.h
-
-qrencode: qrenc.o qrencode.o
+qrencode: qrenc.o qrencode.o qrframe.o
 
 clean:
 	rm -rf qrencode *.o qrdunio dofbit

@@ -9,11 +9,19 @@ int main(int argc, char **argv)
     int x, y;
     int ret;
 
-    ret = fread(strinbuf, 1, sizeof(strinbuf), stdin);
+    x = 1;
+    if( argc > 2 )
+        x = atoi(argv[2]);
+    y = 6;
+    if( argc > 1 )
+        y = atoi(argv[1]);
+
+    y = initecc(x,y);
+
+    ret = fread(strinbuf, 1, y, stdin);
     strinbuf[ret] = '\0';
 
-    //    strcpy((char *)strinbuf, "Hello World!");
-
+    initframe();
     qrencode();
 
     /* data */

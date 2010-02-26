@@ -1,5 +1,27 @@
+#ifndef __AVR__
+#define PROGMEM
+#define memcpy_P memcpy
+#define __LPM(x) *x
+#else
+#include <avr/pgmspace.h>
+#endif
+
 #include <string.h>
+
 #include "qrencode.h"
+
+extern unsigned char neccblk1;
+extern unsigned char neccblk2 ;
+extern unsigned char datablkw;
+extern unsigned char eccblkwid;
+extern unsigned char *framebase;
+extern unsigned char *framask;
+extern unsigned char VERSION;
+extern unsigned char ECCLEVEL;
+extern unsigned char WD, WDB;
+extern unsigned char *strinbuf;
+extern unsigned char *qrframe;
+extern unsigned char *rlens;
 
 //========================================================================
 // Reed Solomon error correction
@@ -65,14 +87,13 @@ static void appendrs(unsigned char *data, unsigned char dsize, unsigned char *ec
 
 //========================================================================
 // 8 bit data to QR-coded 8 bit data
-// 136 (-2), 2(68/18)
 static void stringtoqr(void)
 {
     unsigned i;
     unsigned size, max;
     size = strlen((char *) strinbuf);
 
-    max = DATAWID * (BLOCKS1 + BLOCKS2) + BLOCKS2;
+    max = datablkw * (neccblk1 + neccblk2) + neccblk2;
     if (size >= max - 2 ) {
         size = max - 2;
         if( VERSION > 9 )
@@ -110,30 +131,30 @@ static void stringtoqr(void)
     // calculate and append ECC
     unsigned char *ecc = &strinbuf[max];
     unsigned char *dat = strinbuf;
-    for (i = 0; i < BLOCKS1; i++) {
-        appendrs(dat, DATAWID, ecc, ECCWID);
-        dat += DATAWID;
-        ecc += ECCWID;
+    for (i = 0; i < neccblk1; i++) {
+        appendrs(dat, datablkw, ecc, eccblkwid);
+        dat += datablkw;
+        ecc += eccblkwid;
     }
-    for (i = 0; i < BLOCKS2; i++) {
-        appendrs(dat, DATAWID + 1, ecc, ECCWID);
-        dat += DATAWID + 1;
-        ecc += ECCWID;
+    for (i = 0; i < neccblk2; i++) {
+        appendrs(dat, datablkw + 1, ecc, eccblkwid);
+        dat += datablkw + 1;
+        ecc += eccblkwid;
     }
     unsigned j;
     dat = qrframe;
-    for (i = 0; i < DATAWID; i++) {
-        for (j = 0; j < BLOCKS1; j++)
-            *dat++ = strinbuf[i + j * DATAWID];
-        for (j = 0; j < BLOCKS2; j++)
-            *dat++ = strinbuf[(BLOCKS1 * DATAWID) + i + (j * (DATAWID + 1))];
+    for (i = 0; i < datablkw; i++) {
+        for (j = 0; j < neccblk1; j++)
+            *dat++ = strinbuf[i + j * datablkw];
+        for (j = 0; j < neccblk2; j++)
+            *dat++ = strinbuf[(neccblk1 * datablkw) + i + (j * (datablkw + 1))];
     }
-    for (j = 0; j < BLOCKS2; j++)
-        *dat++ = strinbuf[(BLOCKS1 * DATAWID) + i + (j * (DATAWID + 1))];
-    for (i = 0; i < ECCWID; i++)
-        for (j = 0; j < BLOCKS1 + BLOCKS2; j++)
-            *dat++ = strinbuf[max + i + j * ECCWID];
-    memcpy(strinbuf, qrframe, max + ECCWID * (BLOCKS1 + BLOCKS2));
+    for (j = 0; j < neccblk2; j++)
+        *dat++ = strinbuf[(neccblk1 * datablkw) + i + (j * (datablkw + 1))];
+    for (i = 0; i < eccblkwid; i++)
+        for (j = 0; j < neccblk1 + neccblk2; j++)
+            *dat++ = strinbuf[max + i + j * eccblkwid];
+    memcpy(strinbuf, qrframe, max + eccblkwid * (neccblk1 + neccblk2));
 
 }
 
@@ -161,20 +182,17 @@ static unsigned char ismasked(unsigned char x,unsigned char y)  {
 static void fillframe(void)
 {
     unsigned i;
-    unsigned char d, j, *c;
+    unsigned char d, j;
     unsigned char x, y, ffdecy, ffgohv;
 
     memcpy_P(qrframe, framebase, WDB * WD);
-    //    printframe(qrframe);
     x = y = WD - 1;
     ffdecy = 1;                 // up, minus
     ffgohv = 1;
 
     /* inteleaved data and ecc codes */
-    // as is, qrframe could be *c++, butL I want to do bits
-    c = strinbuf;
-    for (i = 0; i < ((DATAWID + ECCWID) * (BLOCKS1 + BLOCKS2) + BLOCKS2); i++) {
-        d = *c++;
+    for (i = 0; i < ((datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2); i++) {
+        d = strinbuf[i];
         for (j = 0; j < 8; j++, d <<= 1) {
             if (0x80 & d)
                 SETQRBIT(x, y);
@@ -211,6 +229,7 @@ static void fillframe(void)
             } while (ismasked(x, y));
         }
     }
+
 }
 
 //========================================================================
@@ -259,6 +278,7 @@ static unsigned applymask(unsigned char m)
         }
     if (b < 0)
         b = -b;
+
     return b;
 }
 
@@ -268,7 +288,6 @@ static const unsigned char N2 = 3;
 static const unsigned char N3 = 40;
 static const unsigned char N4 = 10;
 
-static unsigned char rlens[WD + 1];
 static unsigned badruns(unsigned char length)
 {
     unsigned char i;

@@ -1,10 +1,14 @@
 #include <string.h>
+#include <stdlib.h>
 
-extern unsigned char qrframe[];
-extern unsigned char framask[];
-extern unsigned char qrwidth, qrwidbytes;
+unsigned char *framebase;
+unsigned char *framask;
+unsigned char *rlens;
+unsigned char VERSION;
+unsigned char WD, WDB; // filled in from verison by initframe
 
-#include "qrbits.h"
+#define QRBIT(x,y) ( ( framebase[((x)>>3) + (y) * WDB] >> (7-((x) & 7 ))) & 1 )
+#define SETQRBIT(x,y) framebase[((x)>>3) + (y) * WDB] |= 0x80 >> ((x) & 7)
 
 static void setmask(unsigned char x,unsigned char y)  {
     unsigned bt;
@@ -29,9 +33,9 @@ static void putfind()
         k = 0;
         i = 0;
         if (t == 1)
-            k = (qrwidth - 7);
+            k = (WD - 7);
         if (t == 2)
-            i = (qrwidth - 7);
+            i = (WD - 7);
         SETQRBIT(i + 3, k + 3);
         for (j = 0; j < 6; j++) {
             SETQRBIT(i + j, k);
@@ -79,15 +83,15 @@ static const unsigned char adelta[41] = {
     26, 26, 28, 28, 24, 24, 26, 26, 26, 28, 28, 24, 26, 26, 26, 28, 28,
 };
 
-static void doaligns(unsigned char vers)
+static void doaligns(void)
 {
     unsigned char delta, x, y;
-    if (vers < 2)
+    if (VERSION < 2)
         return;
-    delta = adelta[vers];
-    y = qrwidth - 7;
+    delta = adelta[VERSION];
+    y = WD - 7;
     for (;;) {
-        x = qrwidth - 7;
+        x = WD - 7;
         while (x > delta - 3U) {
             putalign(x, y);
             if (x < delta)
@@ -110,8 +114,9 @@ static const unsigned vpat[] = {
     0x541, 0xc69
 };
 
-static void putvpat(unsigned char vers)
+static void putvpat(void)
 {
+    unsigned char vers = VERSION;
     unsigned char x, y, bc;
     unsigned verinfo;
     if (vers < 7)
@@ -122,52 +127,50 @@ static void putvpat(unsigned char vers)
     for (x = 0; x < 6; x++)
         for (y = 0; y < 3; y++, bc--)
             if (1&(bc > 11 ? vers >> (bc - 12) : verinfo >> bc)) {
-                SETQRBIT( 5-x,2-y+qrwidth-11);
-                SETQRBIT( 2-y+qrwidth-11,5-x);
+                SETQRBIT( 5-x,2-y+WD-11);
+                SETQRBIT( 2-y+WD-11,5-x);
             }
             else {
-                setmask( 5-x,2-y+qrwidth-11);
-                setmask( 2-y+qrwidth-11,5-x);
+                setmask( 5-x,2-y+WD-11);
+                setmask( 2-y+WD-11,5-x);
             }
 }
 
-void initframe(unsigned char vers)
+void initframe()
 {
     unsigned x, y;
-    if (vers > 40)
-        return;
-    qrwidth = 17 + 4 * vers;
-    qrwidbytes = (qrwidth + 7) / 8;
-    memset(qrframe, 0, qrwidbytes*qrwidth);
-    memset(framask, 0, qrwidbytes*qrwidth);
+
+    framebase = calloc(WDB*WD,1);
+    framask = calloc(((WD*(WD+1)/2)+7)/8,1);
+    rlens = malloc(WD+1);
     // finders
     putfind();
     // alignment blocks
-    doaligns(vers);
+    doaligns();
     // single black
-    SETQRBIT(8, qrwidth - 8);
+    SETQRBIT(8, WD - 8);
     // timing gap - masks only
     for (y = 0; y < 7; y++) {
         setmask(7, y);
-        setmask(qrwidth - 8, y);
-        setmask(7, y + qrwidth - 7);
+        setmask(WD - 8, y);
+        setmask(7, y + WD - 7);
     }
     for (x = 0; x < 8; x++) {
         setmask(x, 7);
-        setmask(x + qrwidth - 8, 7);
-        setmask(x, qrwidth - 8);
+        setmask(x + WD - 8, 7);
+        setmask(x, WD - 8);
     }
     // reserve mask-format area
     for (x = 0; x < 9; x++)
         setmask(x, 8);
     for (x = 0; x < 8; x++) {
-        setmask(x + qrwidth - 8, 8);
+        setmask(x + WD - 8, 8);
         setmask(8, x);
     }
     for (y = 0; y < 7; y++)
-        setmask(8, y + qrwidth - 7);
+        setmask(8, y + WD - 7);
     // timing
-    for (x = 0; x < qrwidth - 14; x++)
+    for (x = 0; x < WD - 14; x++)
         if (x & 1) {
             setmask(8 + x, 6);
             setmask(6, 8 + x);
@@ -177,9 +180,49 @@ void initframe(unsigned char vers)
         }
 
     // version block
-    putvpat(vers);
-    for( y = 0 ; y < qrwidth; y++ )
+    putvpat();
+    for( y = 0 ; y < WD; y++ )
         for (x = 0; x <= y; x++)
             if( QRBIT(x,y) )
                 setmask(x,y);
+}
+
+unsigned char *strinbuf;
+unsigned char *qrframe;
+unsigned char ECCLEVEL;
+unsigned char neccblk1;
+unsigned char neccblk2 ;
+unsigned char datablkw;
+unsigned char eccblkwid;
+
+#ifndef __AVR__
+#define PROGMEM
+#define memcpy_P memcpy
+#define __LPM(x) *x
+#else
+#include <avr/pgmspace.h>
+#endif
+
+#include "ecctable.h"
+
+unsigned initecc(unsigned char ecc, unsigned char vers) {
+    VERSION = vers;
+    WD = 17 + 4 * vers;
+    WDB = (WD + 7) / 8;
+
+    unsigned fsz = WD*WDB;
+    if( fsz < 768 ) // for ECC math buffers
+        fsz = 768;
+    qrframe = malloc( fsz );
+
+    ECCLEVEL = ecc;
+    unsigned eccindex = (ecc - 1) * 4 + (vers - 1) * 16;
+
+    neccblk1 = eccblocks[eccindex++] ;
+    neccblk2 = eccblocks[eccindex++] ;
+    datablkw = eccblocks[eccindex++] ;
+    eccblkwid = eccblocks[eccindex++] ;
+
+    strinbuf = malloc((datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2);
+    return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2; //-3 if vers > 9!
 }

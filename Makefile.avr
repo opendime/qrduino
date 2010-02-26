@@ -1,3 +1,5 @@
+HOSTGCC=gcc
+
 all: lcd.hex
 
 .SUFFIXES: .elf .hex .eep .lss .sym .upload .dsm
@@ -26,12 +28,16 @@ MAP=-Wl,"-Map" -Wl,"$@.map" -Wl,"--cref"
 .hex.upload: 
 	avrdude -F -p $(CPU) -P $(PORT) -c arduino -b 57600 -U $^
 
-lcd.elf: lcd.o qrencode.o
+lcd.elf: lcd.o qrencode.o qrv6l1.o
 	avr-gcc $(CFLAGS) -Wall -mmcu=$(CPU)  $^ -o $@
-
-qrencode.o: qrencode.h framask.h qrencode.c
 
 qrduino.elf: qrduino.o qrencode.o
 
 clean:
-	rm -rf qrencode *.o qrdunio
+	rm -rf qrencode *.o qrdunio dofbit qrv6l1.*
+
+qrv6l1.c: dofbit
+	./dofbit 6 1 >qrv6l1.c
+
+dofbit: dofbit.c qrframe.c
+	$(HOSTGCC) $^ -o $@
