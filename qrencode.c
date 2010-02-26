@@ -407,7 +407,7 @@ static int badcheck()
 
 // final format bits with mask
 // level << 3 | mask
-static const unsigned fmtword[] = {
+static const unsigned fmtword[] PROGMEM = {
     0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976,     //L
     0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0,     //M
     0x355f, 0x3068, 0x3f31, 0x3a06, 0x24b4, 0x2183, 0x2eda, 0x2bed,     //Q
@@ -419,7 +419,7 @@ static void addfmt(unsigned char masknum)
     unsigned fmtbits;
     unsigned char i, lvl = ECCLEVEL - 1;
 
-    fmtbits = fmtword[masknum + (lvl << 3)];
+    fmtbits = pgm_read_word(&fmtword[masknum + (lvl << 3)]);
     // low byte
     for (i = 0; i < 8; i++, fmtbits >>= 1)
         if (fmtbits & 1) {

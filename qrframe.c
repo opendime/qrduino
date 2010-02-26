@@ -1,6 +1,15 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifndef __AVR__
+#define PROGMEM
+#define memcpy_P memcpy
+#define __LPM(x) *x
+#define pgm_read_word(x) *x
+#else
+#include <avr/pgmspace.h>
+#endif
+
 unsigned char *framebase;
 unsigned char *framask;
 unsigned char *rlens;
@@ -78,7 +87,7 @@ static void putalign(int x, int y)
     }
 }
 
-static const unsigned char adelta[41] = {
+static const unsigned char adelta[41] PROGMEM = {
     0, 11, 15, 19, 23, 27, 31,  // force 1 pat
     16, 18, 20, 22, 24, 26, 28, 20, 22, 24, 24, 26, 28, 28, 22, 24, 24,
     26, 26, 28, 28, 24, 24, 26, 26, 26, 28, 28, 24, 26, 26, 26, 28, 28,
@@ -89,7 +98,7 @@ static void doaligns(void)
     unsigned char delta, x, y;
     if (VERSION < 2)
         return;
-    delta = adelta[VERSION];
+    delta = __LPM(&adelta[VERSION]);
     y = WD - 7;
     for (;;) {
         x = WD - 7;
@@ -107,7 +116,7 @@ static void doaligns(void)
     }
 }
 
-static const unsigned vpat[] = {
+static const unsigned vpat[] PROGMEM = {
     0xc94, 0x5bc, 0xa99, 0x4d3, 0xbf6, 0x762, 0x847, 0x60d,
     0x928, 0xb78, 0x45d, 0xa17, 0x532, 0x9a6, 0x683, 0x8c9,
     0x7ec, 0xec4, 0x1e1, 0xfab, 0x08e, 0xc1a, 0x33f, 0xd75,
@@ -122,7 +131,7 @@ static void putvpat(void)
     unsigned verinfo;
     if (vers < 7)
         return;
-    verinfo = vpat[vers - 7];
+    verinfo = pgm_read_word(&vpat[vers - 7]);
 
     bc = 17;
     for (x = 0; x < 6; x++)

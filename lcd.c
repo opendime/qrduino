@@ -23,7 +23,7 @@ void LcdWrite(unsigned char dc, unsigned char data)
 #include "qrencode.h"
 
 #include <string.h>
-main()
+int main()
 {
     DDRB |= 0x20;
     PORTB |= 0xf8;
