@@ -9,7 +9,7 @@ CPU=atmega328p
 PORT=/dev/ttyUSB0
 
 XTAL=8000000 #Arduino 3.3v Pro
-CFLAGS=-g -DF_CPU=$(XTAL) -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8
+CFLAGS=-g -DF_CPU=$(XTAL) -I ../uart  -DTXBUFBITS=8 -DRXBUFBITS=8 -O
 
 .elf.dsm:
 	avr-objdump --disassemble -S $^ >$@

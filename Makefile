@@ -1,4 +1,4 @@
-CFLAGS:=-Wall -g -Os
+CFLAGS:=-Wall -g -O6
 #CC=avr-gcc -mmcu=atmega328p
 CC=gcc
 
