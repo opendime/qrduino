@@ -3,7 +3,7 @@
 #include "qrencode.h"
 
 extern unsigned char neccblk1;
-extern unsigned char neccblk2 ;
+extern unsigned char neccblk2;
 extern unsigned char datablkw;
 extern unsigned char eccblkwid;
 extern unsigned char VERSION;
@@ -90,14 +90,14 @@ static void stringtoqr(void)
     size = strlen((char *) strinbuf);
 
     max = datablkw * (neccblk1 + neccblk2) + neccblk2;
-    if (size >= max - 2 ) {
+    if (size >= max - 2) {
         size = max - 2;
-        if( VERSION > 9 )
+        if (VERSION > 9)
             size--;
     }
 
     i = size;
-    if( VERSION > 9 ) {
+    if (VERSION > 9) {
         strinbuf[i + 2] = 0;
         while (i--) {
             strinbuf[i + 3] |= strinbuf[i] << 4;
@@ -106,8 +106,7 @@ static void stringtoqr(void)
         strinbuf[2] |= size << 4;
         strinbuf[1] = size >> 4;
         strinbuf[0] = 0x40 | (size >> 12);
-    }
-    else {
+    } else {
         strinbuf[i + 1] = 0;
         while (i--) {
             strinbuf[i + 2] |= strinbuf[i] << 4;
@@ -119,8 +118,7 @@ static void stringtoqr(void)
     i = size + 3 - (VERSION < 10);
     while (i < max) {
         strinbuf[i++] = 0xec;
-        if (i == max)
-            break;
+        // buffer has room        if (i == max)            break;
         strinbuf[i++] = 0x11;
     }
 
@@ -156,9 +154,10 @@ static void stringtoqr(void)
 
 //========================================================================
 // Frame data insert following the path rules
-static unsigned char ismasked(unsigned char x,unsigned char y)  {
+static unsigned char ismasked(unsigned char x, unsigned char y)
+{
     unsigned bt;
-    if( x > y ) {
+    if (x > y) {
         bt = x;
         x = y;
         y = bt;
@@ -166,13 +165,13 @@ static unsigned char ismasked(unsigned char x,unsigned char y)  {
     bt = y;
     // bt += y*y;
     unsigned s = 1;
-    while( y-- ) {
+    while (y--) {
         bt += s;
         s += 2;
     }
     bt >>= 1;
     bt += x;
-    return (__LPM(&framask[bt >> 3]) >> (7-(bt&7))) & 1;
+    return (__LPM(&framask[bt >> 3]) >> (7 - (bt & 7))) & 1;
 }
 
 static void fillframe(void)
@@ -235,55 +234,130 @@ static unsigned applymask(unsigned char m)
     unsigned char x, y, r3x, r3y, d3x, t = 0;
     int b = 0;
 
-    for (r3y = 0, y = 0; y < WD; y++, r3y++) {
-        if( r3y == 3 )
-            r3y = 0;
-        for (r3x = 0,d3x = 0, x = 0; x < WD; x++, r3x++) {
-            if( r3x == 3 ) {
-                r3x = 0;
-                d3x++;
-            }
-            if (!ismasked(x, y)) {
-                switch (m) {
-                case 0:
-                    t = !((x + y) & 1);
-                    break;
-                case 1:
-                    t = !(y & 1);
-                    break;
-                case 2:
-                    t = !(r3x);
-                    break;
-                case 3:
-                    t = r3x+r3y;
-                    if( t > 2 )
-                        t -= 3;
-                    t = !t;
-                    break;
-                case 4:
-
-                    t = !(((y>>1) + d3x) & 1);
-
-                    break;
-                case 5:
-                    t = !((x & y & 1) + (!!r3x & !!r3y));
-                    break;
-                case 6:
-                    t = !(((x & y & 1) + (r3x && (r3x == r3y))) & 1);
-                    break;
-                case 7:
-                    t = !(((r3x && (r3x == r3y)) + ((x + y) & 1)) & 1);
-                    break;
-                }
-                if (t)
+    switch (m) {
+    case 0:
+        for (y = 0; y < WD; y++)
+            for (x = 0; x < WD; x++) {
+                if (!ismasked(x, y) && !((x + y) & 1))
                     TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
             }
-            if (QRBIT(x, y))    // count excess whites v.s blacks
-                b++;
-            else
-                b--;
+        break;
+    case 1:
+        for (y = 0; y < WD; y++)
+            for (x = 0; x < WD; x++) {
+                if (!ismasked(x, y) && !(y & 1))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        break;
+    case 2:
+        for (y = 0; y < WD; y++)
+            for (r3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3)
+                    r3x = 0;
+                if (!ismasked(x, y) && !(r3x))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        break;
+    case 3:
+        for (r3y = 0, y = 0; y < WD; y++, r3y++) {
+            if (r3y == 3)
+                r3y = 0;
+            for (r3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3)
+                    r3x = 0;
+                if (!ismasked(x, y)) {
+                    t = r3x + r3y;
+                    if (t > 2)
+                        t -= 3;
+                    if (!t)
+                        TOGQRBIT(x, y);
+                }
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
         }
+        break;
+    case 4:
+        for (y = 0; y < WD; y++)
+            for (r3x = 0, d3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3) {
+                    r3x = 0;
+                    d3x++;
+                }
+                if (!ismasked(x, y) && !(((y >> 1) + d3x) & 1))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        break;
+    case 5:
+        for (r3y = 0, y = 0; y < WD; y++, r3y++) {
+            if (r3y == 3)
+                r3y = 0;
+            for (r3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3)
+                    r3x = 0;
+                if (!ismasked(x, y) && !((x & y & 1) + (!!r3x & !!r3y)))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        }
+
+        break;
+    case 6:
+        for (r3y = 0, y = 0; y < WD; y++, r3y++) {
+            if (r3y == 3)
+                r3y = 0;
+            for (r3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3)
+                    r3x = 0;
+                if (!ismasked(x, y) && !(((x & y & 1) + (r3x && (r3x == r3y))) & 1))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        }
+
+        break;
+    case 7:
+        for (r3y = 0, y = 0; y < WD; y++, r3y++) {
+            if (r3y == 3)
+                r3y = 0;
+            for (r3x = 0, x = 0; x < WD; x++, r3x++) {
+                if (r3x == 3)
+                    r3x = 0;
+                if (!ismasked(x, y) && !(((r3x && (r3x == r3y)) + ((x + y) & 1)) & 1))
+                    TOGQRBIT(x, y);
+                if (QRBIT(x, y))        // count excess whites v.s blacks
+                    b++;
+                else
+                    b--;
+            }
+        }
+        break;
     }
+
     if (b < 0)
         b = -b;
 
@@ -370,7 +444,7 @@ static const unsigned fmtword[] = {
 static void addfmt(unsigned char masknum)
 {
     unsigned fmtbits;
-    unsigned char i, lvl = ECCLEVEL-1;
+    unsigned char i, lvl = ECCLEVEL - 1;
 
     fmtbits = fmtword[masknum + (lvl << 3)];
     // low byte
@@ -401,8 +475,8 @@ void qrencode()
     unsigned badness;
 
     stringtoqr();
-    fillframe();            // Inisde loop to avoid having separate mask buffer
-    memcpy(strinbuf,qrframe,WD*WDB);
+    fillframe();                // Inisde loop to avoid having separate mask buffer
+    memcpy(strinbuf, qrframe, WD * WDB);
     for (i = 0; i < 8; i++) {
         badness = applymask(i); // returns black-white imbalance
         badness *= 10;
@@ -421,9 +495,9 @@ void qrencode()
         }
         if (best == 7)
             break;              // don't increment i to avoid redoing mask
-        memcpy(qrframe,strinbuf,WD*WDB); // reset filled frame
+        memcpy(qrframe, strinbuf, WD * WDB);    // reset filled frame
     }
-    if (best != i)            // redo best mask - none good enough, last wasn't best
+    if (best != i)              // redo best mask - none good enough, last wasn't best
         applymask(best);
     addfmt(best);               // add in final format bytes
 }
