@@ -7,6 +7,7 @@ while [ $i -ne 41 ]; do
     for j in 1 2 3 4; do 
         echo $i $j
         echo "Hello" | ./qrencode $i $j >Hello$i$j.pbm
+        diff -q Hello$i$j.pbm regout/
     done
 i=$[$i+1]
 done

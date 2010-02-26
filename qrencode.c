@@ -1,11 +1,3 @@
-#ifndef __AVR__
-#define PROGMEM
-#define memcpy_P memcpy
-#define __LPM(x) *x
-#else
-#include <avr/pgmspace.h>
-#endif
-
 #include <string.h>
 
 #include "qrencode.h"
@@ -14,14 +6,18 @@ extern unsigned char neccblk1;
 extern unsigned char neccblk2 ;
 extern unsigned char datablkw;
 extern unsigned char eccblkwid;
-extern unsigned char *framebase;
-extern unsigned char *framask;
 extern unsigned char VERSION;
 extern unsigned char ECCLEVEL;
 extern unsigned char WD, WDB;
-extern unsigned char *strinbuf;
-extern unsigned char *qrframe;
+#ifndef USEPRECALC
 extern unsigned char *rlens;
+extern unsigned char *framebase;
+extern unsigned char *framask;
+#else
+extern unsigned char rlens[];
+extern unsigned char framebase[] PROGMEM;
+extern unsigned char framask[] PROGMEM;
+#endif
 
 //========================================================================
 // Reed Solomon error correction
@@ -176,7 +172,7 @@ static unsigned char ismasked(unsigned char x,unsigned char y)  {
     }
     bt >>= 1;
     bt += x;
-    return (framask[bt >> 3] >> (7-(bt&7))) & 1;
+    return (__LPM(&framask[bt >> 3]) >> (7-(bt&7))) & 1;
 }
 
 static void fillframe(void)
@@ -236,11 +232,17 @@ static void fillframe(void)
 // Masking 
 static unsigned applymask(unsigned char m)
 {
-    unsigned char x, y, t = 0;
+    unsigned char x, y, r3x, r3y, d3x, t = 0;
     int b = 0;
 
-    for (y = 0; y < WD; y++)
-        for (x = 0; x < WD; x++) {
+    for (r3y = 0, y = 0; y < WD; y++, r3y++) {
+        if( r3y == 3 )
+            r3y = 0;
+        for (r3x = 0,d3x = 0, x = 0; x < WD; x++, r3x++) {
+            if( r3x == 3 ) {
+                r3x = 0;
+                d3x++;
+            }
             if (!ismasked(x, y)) {
                 switch (m) {
                 case 0:
@@ -250,22 +252,27 @@ static unsigned applymask(unsigned char m)
                     t = !(y & 1);
                     break;
                 case 2:
-                    t = !(x % 3);
+                    t = !(r3x);
                     break;
                 case 3:
-                    t = !((x + y) % 3);
+                    t = r3x+r3y;
+                    if( t > 2 )
+                        t -= 3;
+                    t = !t;
                     break;
                 case 4:
-                    t = !(((y / 2) + (x / 3)) & 1);
+
+                    t = !(((y>>1) + d3x) & 1);
+
                     break;
                 case 5:
-                    t = !(((x * y) & 1) + (x * y) % 3);
+                    t = !((x & y & 1) + (!!r3x & !!r3y));
                     break;
                 case 6:
-                    t = !((((x * y) & 1) + (x * y) % 3) & 1);
+                    t = !(((x & y & 1) + (r3x && (r3x == r3y))) & 1);
                     break;
                 case 7:
-                    t = !((((x * y) % 3) + ((x + y) & 1)) & 1);
+                    t = !(((r3x && (r3x == r3y)) + ((x + y) & 1)) & 1);
                     break;
                 }
                 if (t)
@@ -276,6 +283,7 @@ static unsigned applymask(unsigned char m)
             else
                 b--;
         }
+    }
     if (b < 0)
         b = -b;
 
