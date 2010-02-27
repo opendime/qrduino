@@ -42,7 +42,8 @@ int main(int argc, char *argv[])
     if( argc > 1 )
         c = argv[1];
 
-    initeccsize( 1, strlen(c));
+    k = initeccsize( 1, strlen(c));
+    fprintf( stderr, "%d bytes %d\n'", strlen(c), k );
     initframe();
     strcpy((char *)strinbuf, c );
     qrencode();

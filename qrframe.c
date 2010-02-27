@@ -245,7 +245,7 @@ unsigned initecc(unsigned char ecc, unsigned char vers)
     return datablkw * (neccblk1 + neccblk2) + neccblk2 - 3;     //-2 if vers <= 9!
 }
 
-unsigned initeccsize(unsigned char ecc, unsigned char size)
+unsigned initeccsize(unsigned char ecc, unsigned size)
 {
     unsigned eccindex;
     unsigned char vers;

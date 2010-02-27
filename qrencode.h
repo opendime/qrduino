@@ -17,7 +17,7 @@ void initframe(void);
 // free the basic frame malloced structures
 void freeframe(void);
 // these resturn maximum string size to send in
-unsigned initeccsize(unsigned char ecc, unsigned char size);
+unsigned initeccsize(unsigned char ecc, unsigned size);
 unsigned initecc(unsigned char level,unsigned char version);
 #else // precalc-ed arrays
 extern unsigned char strinbuf[];
