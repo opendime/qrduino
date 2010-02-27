@@ -28,26 +28,24 @@ unsigned char jpeg0[] = {
     0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00
 };
 
-#define WD (41)
-#define CL (172)
-
-extern unsigned char qrframe[WD * WD];
-extern unsigned char strinbuf[CL];
-extern void qrcode(void);
+#include "qrencode.h"
 
 #include <string.h>
 int main(int argc, char *argv[])
 {
-    unsigned char *c;
+    unsigned char x, y;
+    char *c;
     unsigned width, height, j, k;
     width = height = WD;
 
-    if (argc < 2)
-        strcpy((char *)strinbuf, "Hello World!");
-    else
-        strcpy((char*)strinbuf, argv[1]);
-    qrcode();
-    c = qrframe;
+    c = "Hello from HarleyHacking";
+    if( argc > 1 )
+        c = argv[1];
+
+    initeccsize( 1, strlen(c));
+    initframe();
+    strcpy((char *)strinbuf, c );
+    qrencode();
     // set height and width in header
     jpeg0[0x5e] = WD >> 5;
     jpeg0[0x5f] = WD << 3;
@@ -56,21 +54,20 @@ int main(int argc, char *argv[])
     // write out header
     fwrite(jpeg0, 1, sizeof(jpeg0), stdout);
     // put half full scale, 3e for white, 40 for black
-    j = *c++ & 1;
+    k = j = QRBIT(0,0);
     putchar(j ? 0x3e : 0x40);
-    k = j;
-    int i = 0;
-    for (;;) {
-        j = *c++ & 1;
-        if (++i >= WD*WD)
-            break;
-        if (k == j) {
-            putchar(0x80);      // code for no change
-            continue;
+    for (y = 0; y < WD; y++) 
+        for (x = 0; x < WD; x++)  {
+            if( x+y== 0)
+                continue;
+            j = QRBIT(x,y);
+            if (k == j) {
+                putchar(0x80);      // code for no change
+                continue;
+            }
+            putchar(j ? 0 : 0x7e);   // full scale flip
+            k = j;
         }
-        putchar(j ? 0 : 0x7e);   // full scale flip
-        k = j;
-    }
     putchar(0x80);              // one last for EOF
     putchar(0xFF);              // end marker
     putchar(0xd9);

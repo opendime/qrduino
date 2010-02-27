@@ -8,21 +8,26 @@
 #define USEPRECALC
 #endif
 
-extern unsigned char  WD, WDB;
 #ifndef USEPRECALC
-extern unsigned char *strinbuf;
+// malloc-ed by initframe, free manually
+extern unsigned char *strinbuf; // string iput buffer
 extern unsigned char *qrframe;
-#else
+// setup the base frame structure - can be reused
+void initframe(void);
+// free the basic frame malloced structures
+void freeframe(void);
+// these resturn maximum string size to send in
+unsigned initeccsize(unsigned char ecc, unsigned char size);
+unsigned initecc(unsigned char level,unsigned char version);
+#else // precalc-ed arrays
 extern unsigned char strinbuf[];
 extern unsigned char qrframe[];
 #endif
 
+extern unsigned char  WD, WDB;
 #include "qrbits.h"
 
+// strinbuf in, qrframe out
 void qrencode(void);
 
-//qrframe only
-void initframe(void);
-unsigned initeccsize(unsigned char ecc, unsigned char size);
-unsigned initecc(unsigned char level,unsigned char version);
 

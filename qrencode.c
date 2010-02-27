@@ -10,6 +10,7 @@ extern unsigned char VERSION;
 extern unsigned char ECCLEVEL;
 extern unsigned char WD, WDB;
 #ifndef USEPRECALC
+// These are malloced by initframe
 extern unsigned char *rlens;
 extern unsigned char *framebase;
 extern unsigned char *framask;

@@ -196,6 +196,12 @@ void initframe()
                 setmask(x, y);
 }
 
+void freeframe() {
+    free( framebase );
+    free( framask );
+    free( rlens );
+}
+
 unsigned char *strinbuf;
 unsigned char *qrframe;
 unsigned char ECCLEVEL;
@@ -236,7 +242,7 @@ unsigned initecc(unsigned char ecc, unsigned char vers)
     if (fsz < datablkw + (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2)
         fsz = datablkw + (datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2;
     strinbuf = malloc(fsz);
-    return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2;     //-3 if vers > 9!
+    return datablkw * (neccblk1 + neccblk2) + neccblk2 - 3;     //-2 if vers <= 9!
 }
 
 unsigned initeccsize(unsigned char ecc, unsigned char size)
