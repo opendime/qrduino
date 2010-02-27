@@ -19,8 +19,10 @@ extern unsigned char qrframe[];
 
 #include "qrbits.h"
 
-//qrframe only
-unsigned initecc(unsigned char level,unsigned char version);
- void initframe(void);
-
 void qrencode(void);
+
+//qrframe only
+void initframe(void);
+unsigned initeccsize(unsigned char ecc, unsigned char size);
+unsigned initecc(unsigned char level,unsigned char version);
+

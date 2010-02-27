@@ -17,6 +17,8 @@ int main(int argc, char **argv)
         y = atoi(argv[1]);
 
     y = initecc(x,y);
+    // if size is known, pick frame, 
+    //iiteccsize( ecc, strlen(s) );
 
     ret = fread(strinbuf, 1, y, stdin);
     strinbuf[ret] = '\0';

@@ -238,3 +238,18 @@ unsigned initecc(unsigned char ecc, unsigned char vers)
     strinbuf = malloc(fsz);
     return datablkw * (neccblk1 + neccblk2) + neccblk2 - 2;     //-3 if vers > 9!
 }
+
+unsigned initeccsize(unsigned char ecc, unsigned char size)
+{
+    unsigned eccindex;
+    unsigned char vers;
+    for( vers = 1 ; vers < 40; vers++ ) {
+        eccindex = (ecc - 1) * 4 + (vers - 1) * 16;
+        neccblk1 = eccblocks[eccindex++];
+        neccblk2 = eccblocks[eccindex++];
+        datablkw = eccblocks[eccindex++];
+        if( size < datablkw * (neccblk1 + neccblk2) + neccblk2 - 3 )
+            break;
+    }
+    return initecc( ecc, vers );
+}
