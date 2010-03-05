@@ -2,7 +2,7 @@
 #include <string.h>
 
 unsigned char f[4000][4000], g[4000][4000];
-unsigned long hist[256];
+unsigned char hist[256];
 unsigned w, h;
 
 unsigned iabs(int a)
@@ -117,18 +117,6 @@ void readgray()
         for (x = 0; x < w; x++) {
             g[y][x] = 0;
             scanf("%u", &m);
-#if 0
-            if( s != 255 ) {
-                m *= 255;
-                m /= s;
-            }
-            if (m < 170)
-                m++;
-            if (m < 85)
-                m++;
-            m &= ~1;
-#endif
-            hist[m]++;
             f[y][x] = m;
         }
 }
