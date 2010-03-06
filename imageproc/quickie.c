@@ -2,7 +2,7 @@
 #include <string.h>
 
 unsigned char f[4000][4000];
-unsigned runs[4000];
+unsigned runs[8];
 unsigned w, h;
 unsigned modwid;
 #define MAXCANDS 32
@@ -19,11 +19,12 @@ unsigned iabs(int a)
     return a;
 }
 
-int despeckle(int max)
+#if 0
+int despeckle()
 {
-    int x, y;
+    int x, y, max = 6;
 
-    for (x = 1; x < max - 1; x++) {
+    for (x = 1; x < max; x++) {
         if (runs[x] != 1)
             continue;
         if (runs[x - 1] == 1)
@@ -36,22 +37,33 @@ int despeckle(int max)
             runs[y] = runs[y + 2];
         x--;
     }
-    return max;
+    return 6 - max;
 }
+#endif
 
-int isfinder(int x)
+int isfinder2()
 {
     int a, b, c, d, e, m;
-    a = runs[x];
-    e = runs[x + 4];
-    if (iabs(a - e) > (a + e) / 4)
+    a = runs[1];
+    e = runs[5];
+    if (iabs(a - e) > (a + e + 1) / 4)
         return 0;
-    b = runs[x + 1];
-    d = runs[x + 3];
-    if (iabs(b - d) > (b + d) / 4)
+    b = runs[2];
+    d = runs[4];
+    if (iabs(b - d) > (b + d + 1) / 4)
         return 0;
-    c = runs[x + 2];
-    m = a + e + (b + d) / 2;
+    if( (a+e)*2 < (b+d) )
+        return 0;
+    if( (b+d)*2 < (a+e) )
+        return 0;
+    c = runs[3];
+    if( modwid ) {
+        if( c * 14 < modwid * 5 )
+            return 0;
+        if( c * 10 > modwid * 7 )
+            return 0;
+    }
+    m = a + e + (b + d + 1) / 2;
     if (iabs(c - m) > (c + m) / 4)
         return 0;
     return 1;
@@ -61,27 +73,30 @@ int isfinder(int x)
 unsigned long ave = 0;
 unsigned long avex, avey;
 
-int center(unsigned char j)
+int center(unsigned char j, unsigned lave)
 {
+    // use u d l r
     unsigned r, v, x, y;
     x = fx[j];
     y = fy[j];
 
+    fprintf( stderr, "C %d %d %d %d\n", x, y, f[y][x], lave );
+
     for (r = x - 1; r > 0; r--)
-        if (f[y][r] > ave)
+        if (f[y][r] > lave)
             break;
 #if 0
     for (; r > 0; r--)
-        if (f[y][r] < ave)
+        if (f[y][r] < lave)
             break;
 #endif
     r++;
-    for (v = x + 1; v < h; v++)
-        if (f[y][v] > ave)
+    for (v = x + 1; v < w; v++)
+        if (f[y][v] > lave)
             break;
 #if 0
-    for (; v < h; v++)
-        if (f[y][v] < ave)
+    for (; v < w; v++)
+        if (f[y][v] < lave)
             break;
 #endif
     v--;
@@ -89,40 +104,43 @@ int center(unsigned char j)
     fx[j] = x;
     fw[j] = v - r;
     for (r = y - 1; r > 0; r--)
-        if (f[r][x] > ave)
+        if (f[r][x] > lave)
             break;
 #if 0
     for (; r > 0; r--)
-        if (f[r][x] < ave)
+        if (f[r][x] < lave)
             break;
 #endif
     r++;
     for (v = y + 1; v < h; v++)
-        if (f[v][x] > ave)
+        if (f[v][x] > lave)
             break;
 #if 0
     for (; v < h; v++)
-        if (f[v][x] < ave)
+        if (f[v][x] < lave)
             break;
 #endif
     v--;
     y = (r + v) / 2;
     fy[j] = y;
     fh[j] = v - r;
-    return fw[j]+fh[j];
+    return fw[j] + fh[j];
 }
 
 int findit()
 {
     int x = 0, y, i, b, r, v, found;
     found = 0;
-    for (y = 17; !found && y < h && y < w; y += 2) {
+    // 13 for 2 pixel min, do line 7 if simple 1 ppmod
+    for (y = 13; !found && y < h && y < w; y += 2) {
         ave = 0;
         for (x = 0; x <= y; x++)
             ave += f[y - x][x];
         ave += y / 2;
         ave /= y + 1;
         b = 0, r = 0, i = 0;
+
+        // Note that we only need the current 5 runs, not a  list
         runs[i] = 0;
         for (x = 0; x <= y; x++) {
             v = b;
@@ -138,138 +156,148 @@ int findit()
             runs[i++] = r;
             runs[i] = 0;
             r = 1;
+
+        if ( i > 6 ) {
+            for( v = 0 ; v < 6; v++ )
+                runs[v] = runs[v+2];
+            i -= 2;
         }
-        if (i < 6)
-            continue;
-#if 0
-        i = despeckle(i);
-        if (i < 6)
-            continue;
-#endif
-        r = 0;
-        for (b = 1; b < i - 4; b += 2) {
-            r += runs[b] + runs[b - 1];
-            if (!isfinder(b))
+        if (i > 5) {
+            int xx;
+            fprintf(stderr, "%d,%d,%d,%d,%d - %d, %d\n", runs[1],runs[2],runs[3],runs[4],runs[5], i, x);
+            if (!isfinder2())
                 continue;
-            x = runs[b + 2] / 2 + runs[b + 1] + r;
+            xx = x - runs[5] - runs[4] - (runs[3]/2);
+            fx[0] = xx;
+            fy[0] = y - xx;
+            modwid = center(0, ave);
+            
+            fprintf(stderr, " o %d,%d %d %d\n", fx[0], fy[0], fw[0], fh[0]);
+
             y -= x;
             found = 1;
         }
-    }
-    if (!found)
-        return 0;
-
-    fx[0] = x;
-    fy[0] = y;
-    modwid = center(0);
-
-    //    f[fy[0]][fx[0]] = 255;
-    fprintf(stderr, "%d %d %d\n", x, y, i);
-    return 1;
-}
-
-int findnexty( unsigned char t)
-{
-    int x = 0, y, i, b, r, v, found;
-    avey = ave * 64;
-    found = 0;
-    x = fx[t];
-    b = 0, r = 0, i = 0;
-    runs[i] = 0;
-    fprintf(stderr, "x=%d y=%d,", x, fy[t]);
-    for (y = fy[t]; !found && y < h; y++) {
-        avey += f[y][x];
-        avey -= avey / 64;
-        v = f[y][x] <= avey / 64;
-        if (v == b) {
-            r++;
-            continue;
         }
-        b = v;
-        fprintf(stderr, "%d,", r);
-        runs[i++] = r;
-        runs[i] = 0;
-        r = 1;
-    }
-    fprintf(stderr, " = %d\n", modwid);
-    if (i < 6)
-        return 0;
-    r = 0;
-    for (b = 1; b < i - 4; b += 2) {
-        r += runs[b] + runs[b - 1];
-        if (runs[b] * 8 < modwid || runs[b] * 2 > modwid)
-            continue;
-        if (!isfinder(b))
-            continue;
-        x = fy[t] + runs[b + 2] / 2 + runs[b + 1] + r;
-        fprintf(stderr, "Y: %d\n", x);
-        fy[cands] = x;
-        fx[cands] = fx[t];
-        center(cands);
-
-        if (fw[cands] * 3 < modwid || fw[cands] > modwid)
-            continue;
-        if (fh[cands] * 3 < modwid || fh[cands] > modwid)
-            continue;
-        //        f[fy[cands]][fx[cands]] = 255;
-        cands++;
-        found = 1;
     }
     return found;
 }
 
-int findnextx(unsigned char t)
+// maybe add ave from origin
+void findnexty(unsigned char t)
 {
-    int x = 0, y, i, b, r, v, found;
+    int x = 0, y, i, b, r, v;
+    avey = ave * 64;
+    x = fx[t];
+    b = 0, r = 0, i = 0;
+    runs[i] = 0;
+    fprintf(stderr, "x=%d y=%d,", x, fy[t]);
+    for (y = fy[t]; y < h; y++) {
+        avey += f[y][x];
+        avey -= avey / 64;
+
+        v = f[y][x] <= avey / 64;
+        if (v == b) {
+            r++;
+            if( y+1 != h )
+                continue;
+        }
+
+        b = v;
+
+        runs[i++] = r;
+        runs[i] = 0;
+        r = 1;
+
+        if ( i > 6 ) {
+            for( v = 0 ; v < 6; v++ )
+                runs[v] = runs[v+2];
+            i -= 2;
+        }
+        if (i > 5) {
+            int xx;
+            fprintf(stderr, "%d,%d,%d,%d,%d - %d, %d\n", runs[1],runs[2],runs[3],runs[4],runs[5], i, x);
+
+            if (runs[1] * 8 < modwid || runs[1] * 4 > modwid)
+                continue;
+            if (!isfinder2())
+                continue;
+            xx = y - runs[5] - runs[4] - (runs[3]/2);
+
+            fprintf(stderr, "Y: %d\n", xx);
+            fy[cands] = xx;
+            fx[cands] = fx[t];
+            center(cands, avey/64);
+
+            fprintf(stderr, " + %d,%d %d %d\n", fx[cands], fy[cands], fw[cands], fh[cands]);
+            
+            if (fw[cands] * 3 < modwid || fw[cands] > modwid)
+                continue;
+            if (fh[cands] * 3 < modwid || fh[cands] > modwid)
+                continue;
+            //        f[fy[cands]][fx[cands]] = 255;
+            cands++;
+        }
+    }
+    fprintf(stderr, "\n");
+    return;
+}
+
+void findnextx(unsigned char t)
+{
+    int x = 0, y, i, b, r, v;
     avex = ave * 64;
-    found = 0;
     y = fy[t];
     b = 0, r = 0, i = 0;
     runs[i] = 0;
 
     fprintf(stderr, "y=%d x=%d,", y, fx[t]);
 
-    for (x = fx[t]; !found && x < w; x++) {
+    for (x = fx[t]; x < w; x++) {
         avex += f[y][x];
         avex -= avex / 64;
 
         v = f[y][x] <= avex / 64;
         if (v == b) {
             r++;
-            continue;
+            if( x+1 != w )
+                continue;
         }
+
         b = v;
-        fprintf(stderr, "%d,", r);
         runs[i++] = r;
         runs[i] = 0;
         r = 1;
+        if ( i > 6 ) {
+            for( v = 0 ; v < 6; v++ )
+                runs[v] = runs[v+2];
+            i -= 2;
+        }
+        if (i > 5) {
+            int xx;
+            fprintf(stderr, "%d,%d,%d,%d,%d - %d, %d a %d\n", runs[1],runs[2],runs[3],runs[4],runs[5], i, x, avex/64);
+
+            if (runs[1] * 8 < modwid || runs[1] * 4 > modwid)
+                continue;
+            if (!isfinder2())
+                continue;
+            xx = x - runs[5] - runs[4] - (runs[3]/2);
+            fprintf(stderr, "X: %d\n", xx );
+            fx[cands] = xx;
+            fy[cands] = fy[t];
+            center(cands, avex/64);
+            
+            fprintf(stderr, " + %d,%d %d %d\n", fx[cands], fy[cands], fw[cands], fh[cands]);
+            
+            if (fw[cands] * 3 < modwid || fw[cands] > modwid)
+                continue;
+            if (fh[cands] * 3 < modwid || fh[cands] > modwid)
+                continue;
+
+            cands++;
+        }
     }
     fprintf(stderr, "\n");
-    if (i < 6)
-        return 0;
-    r = 0;
-    for (b = 1; b < i - 4; b += 2) {
-        r += runs[b] + runs[b - 1];
-        if (runs[b] * 8 < modwid || runs[b] * 2 > modwid)
-            continue;
-        if (!isfinder(b))
-            continue;
-        x = fx[t] + runs[b + 2] / 2 + runs[b + 1] + r;
-        fprintf(stderr, "X: %d\n", x);
-        fx[cands] = x;
-        fy[cands] = fx[t];
-        center(cands);
-
-        if (fw[cands] * 3 < modwid || fw[cands] > modwid)
-            continue;
-        if (fh[cands] * 3 < modwid || fh[cands] > modwid)
-            continue;
-
-        //        f[fy[cands]][fx[cands]] = 255;
-        cands++;
-        found = 1;
-    }
-    return found;
+    return;
 }
 
 void readgray()
@@ -298,29 +326,46 @@ main()
 
     j = cands;
     i = 1;
-    while( i <  j) {
+    while (i < j) {
         findnexty(i);
         findnextx(i);
         i++;
     }
     i = j + 1;
     j = cands;
-    while( i <  j) {
+    while (i < j) {
         findnexty(i);
         findnextx(i);
         i++;
     }
 
-    unsigned x, y;
-    for( x = 0 ; x < cands ; x++ ) {
-        fprintf( stderr, "%d,%d %d %d\n", fx[x],fy[x],fw[x],fh[x] );
-        f[fy[x]][fx[x]] = 255;
+    for (i = 0; i < cands - 1; i++)
+        for (j = i + 1; j < cands; j++)
+            if (fx[i] == fx[j] && fy[i] == fy[j]
+              && fw[i] == fw[j] && fh[i] == fh[j]) {
+        fprintf(stderr, "DUP - %d,%d %d %d\n", fx[i], fy[i], fw[i], fh[i]);
+                if (j < cands - 1) {
+                    fx[j] = fx[cands - 1];
+                    fy[j] = fy[cands - 1];
+                    fw[j] = fw[cands - 1];
+                    fh[j] = fh[cands - 1];
+                    j--;
+                }
+                cands--;
+            }
+
+    for (i = 0; i < cands; i++) {
+        fprintf(stderr, "%d,%d %d %d\n", fx[i], fy[i], fw[i], fh[i]);
+        f[fy[i]][fx[i]] = 255;
     }
-    fprintf( stderr, "\n" );
+    fprintf(stderr, "\n");
+
+    if( i < 3 )
+        return;
 
     printf("P2\n%u %u\n255\n", w, h);
-    for (y = 0; y < h; y++)
-        for (x = 0; x < w; x++)
-            printf("%u ", f[y][x]);
+    for (j = 0; j < h; j++)
+        for (i = 0; i < w; i++)
+            printf("%u ", f[j][i]);
 
 }
