@@ -151,7 +151,7 @@ int checkfinder()
 
 unsigned char findit()
 {
-    unsigned x0, x, y, r, xx;
+    unsigned x0, x, y, r, xx, mx;
     unsigned char i, b, v;
 
     // 13 for 2 pixel min, do line 7 if simple 1 ppmod
@@ -161,14 +161,16 @@ unsigned char findit()
         x0 = 0;
         if (y >= height)     // off bottom, don't count
             x0 = 1 + y - height;
-        for (x = x0; x <= y; x++)
+        mx = y;
+        if( y > width )
+            mx = width;
+        for (x = x0; x < mx ; x++)
             ave += getlum(y - x, x);
-        ave += y / 2;
-        ave /= y + 1;
-        b = 0, r = 0, i = 0;
+        ave /= mx - x0;
+        b = 0; r = 0; i = 0;
         // Note that we only need the current 5 runs, not a  list
         runs[i] = 0;
-        for (x = x0; x <= y; x++) {
+        for (x = x0; x < mx; x++) {
             v = getlum(y - x, x) <= ave;
             if (v == b) {
                 r++;
