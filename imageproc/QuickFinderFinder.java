@@ -1,3 +1,5 @@
+// Copyright 2010, tom zerucha, released under the GNU General Public License v3.
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.*;
