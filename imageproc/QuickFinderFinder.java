@@ -298,113 +298,107 @@ public class QuickFinderFinder extends Component {
 
     void findfinders() {
 
-
-        lasty = 13;
-        //    for (;;) {
         width = img.getWidth();
         height = img.getHeight();
 
-        while( true ) {
+        for( lasty = 13; lasty < width || lasty < height; lasty += 2 ) {
 
-        if (0 == findit())
-            return;
-        findnexty(fx[0], fy[0]);
-        findnextx(fx[0], fy[0]);
+            if (0 == findit())
+                return;
+            findnexty(fx[0], fy[0]);
+            findnextx(fx[0], fy[0]);
 
-        //        System.out.println("Found2:" + finds);
-        int i,j;
-
-
-        j = finds;
-        i = 1;
-        while (i < j) {
-            findnexty(fx[i], fy[i]);
-            findnextx(fx[i], fy[i]);
-            i++;
-        }
-
-        i = j + 1;
-        j = finds;
-        while (i < j) {
-            findnexty(fx[i], fy[i]);
-            findnextx(fx[i], fy[i]);
-            i++;
-        }
-
-        if (finds < 3) {
-            // try harder, misalignment
-            findnexty(fx[0] - fw[0] / 2, fy[0]);
-            findnexty(fx[0] + fw[0] / 2, fy[0]);
-            findnextx(fx[0], fy[0] - fh[0] / 2);
-            findnextx(fx[0], fy[0] + fh[0] / 2);
-        }
-
-        for (i = 0; i < finds - 1; i++)
-            for (j = i + 1; j < finds; j++)
-                if (iabs(fx[i] - fx[j]) < modwid / 2 && iabs(fy[i] - fy[j]) < modwid / 2) {     // coincident centers
-                    //                fprintf(stderr, "DUP - %d,%d %d %d\n", fx[i], fy[i], fw[i], fh[i]);
-                    if (j < finds - 1) {
-                        fx[j] = fx[finds - 1];
-                        fy[j] = fy[finds - 1];
-                        fw[j] = fw[finds - 1];
-                        fh[j] = fh[finds - 1];
-                        j--;
-                    }
-                    finds--;
-                }
-
-        int besti = 1;
-        int bestj = 2;
-        int bestk = 0;
-        if (finds > 2) {
-            for (i = 1; i < finds - 1; i++)
-                for (j = i + 1; j < finds; j++) {
-                    int k, m;
-                    // smallest side of largest rectangle
-
-                    k = TEST(iabs(fx[0] - fx[i]), iabs(fy[0] - fy[i]));
-                    m = TEST(iabs(fx[0] - fx[j]), iabs(fy[0] - fy[j]));
-                    if (m > k)
-                        k = m;
-                    m = TEST(iabs(fx[j] - fx[i]), iabs(fy[j] - fy[i]));
-                    if (m > k)
-                        k = m;
-                    if (k > bestk) {
-                        besti = i;
-                        bestj = j;
-                        bestk = k;
-                    }
-                    //                    fprintf(stderr, "A %d %d = %d\n", i, j, k);
-                }
-
-        }
+            //        System.out.println("Found2:" + finds);
+            int i,j;
 
 
-        // pick most likely 3
-        for (i = 0; i < finds; i++) {
-            //            fprintf(stderr, "%d : %d,%d %d %d\n", (i == 0 || i == besti || i == bestj), fx[i], fy[i], fw[i], fh[i]);
-            System.out.println(i+":"+fx[i]+":"+fy[i]+":"+fw[i]+":"+fh[i]);
-            if(i == 0 || i == besti || i == bestj) {
-
-                // ONE OF THE FOUND
-
-                for (j = 0; j < fw[i]; j++)
-                    img.setRGB(  fx[i] - fw[i] / 2 + j , fy[i], 255<<8 );
-                for (j = 0; j < fh[i]; j++)
-                    img.setRGB(  fx[i], fy[i] - fh[i] / 2 + j , 255<<16 );
+            j = finds;
+            i = 1;
+            while (i < j) {
+                findnexty(fx[i], fy[i]);
+                findnextx(fx[i], fy[i]);
+                i++;
             }
+
+            i = j + 1;
+            j = finds;
+            while (i < j) {
+                findnexty(fx[i], fy[i]);
+                findnextx(fx[i], fy[i]);
+                i++;
+            }
+
+            if (finds < 3) {
+                // try harder, misalignment
+                findnexty(fx[0] - fw[0] / 2, fy[0]);
+                findnexty(fx[0] + fw[0] / 2, fy[0]);
+                findnextx(fx[0], fy[0] - fh[0] / 2);
+                findnextx(fx[0], fy[0] + fh[0] / 2);
+            }
+
+            for (i = 0; i < finds - 1; i++)
+                for (j = i + 1; j < finds; j++)
+                    if (iabs(fx[i] - fx[j]) < modwid / 2 && iabs(fy[i] - fy[j]) < modwid / 2) {     // coincident centers
+                        //                fprintf(stderr, "DUP - %d,%d %d %d\n", fx[i], fy[i], fw[i], fh[i]);
+                        if (j < finds - 1) {
+                            fx[j] = fx[finds - 1];
+                            fy[j] = fy[finds - 1];
+                            fw[j] = fw[finds - 1];
+                            fh[j] = fh[finds - 1];
+                            j--;
+                        }
+                        finds--;
+                    }
+
+            int besti = 1;
+            int bestj = 2;
+            int bestk = 0;
+            if (finds > 2) {
+                for (i = 1; i < finds - 1; i++)
+                    for (j = i + 1; j < finds; j++) {
+                        int k, m;
+                        // smallest side of largest rectangle
+
+                        k = TEST(iabs(fx[0] - fx[i]), iabs(fy[0] - fy[i]));
+                        m = TEST(iabs(fx[0] - fx[j]), iabs(fy[0] - fy[j]));
+                        if (m > k)
+                            k = m;
+                        m = TEST(iabs(fx[j] - fx[i]), iabs(fy[j] - fy[i]));
+                        if (m > k)
+                            k = m;
+                        if (k > bestk) {
+                            besti = i;
+                            bestj = j;
+                            bestk = k;
+                        }
+                        //                    fprintf(stderr, "A %d %d = %d\n", i, j, k);
+                    }
+
+            }
+
+
+            // pick most likely 3
+            for (i = 0; i < finds; i++) {
+                //            fprintf(stderr, "%d : %d,%d %d %d\n", (i == 0 || i == besti || i == bestj), fx[i], fy[i], fw[i], fh[i]);
+                System.out.println(i+":"+fx[i]+":"+fy[i]+":"+fw[i]+":"+fh[i]);
+                if(i == 0 || i == besti || i == bestj) {
+
+                    // ONE OF THE FOUND
+
+                    //MARK FOUND
+                    for (j = 0; j < fw[i]; j++)
+                        img.setRGB(  fx[i] - fw[i] / 2 + j , fy[i], 255<<8 );
+                    for (j = 0; j < fh[i]; j++)
+                        img.setRGB(  fx[i], fy[i] - fh[i] / 2 + j , 255<<16 );
+                }
+            }
+
+            if( finds > 2 )
+                break;
         }
-
-
-        if( finds > 2 )
-            break;
     }
 
-
-    }
-
-
-
+////////////////////////////////////////////////////////////////////////
 
 
 
