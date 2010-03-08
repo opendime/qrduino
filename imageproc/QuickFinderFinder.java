@@ -12,16 +12,16 @@ public class QuickFinderFinder extends Component {
 
 
     // line 7, 1 pixel per module would be a special case I don't handle
-    int lasty = 13;
+    int lasty;
 
-    long ave = 0;
-    int modwid;
+    long ave;
+    int modwidx8;
     int finds;
 
-    int[] fx = new int[256];
-    int[] fy = new int[256];
-    int[] fw = new int[256];
-    int[] fh = new int[256];
+    int[] fx = new int[32];
+    int[] fy = new int[32];
+    int[] fw = new int[32];
+    int[] fh = new int[32];
 
     int width, height;
 
@@ -108,23 +108,37 @@ public class QuickFinderFinder extends Component {
         fy[finds] = y;
         fh[finds] = v - r;
 
+        System.out.print("C"+finds+": "+fx[finds]+" "+fy[finds]+" "+fw[finds]+" "+fh[finds]);
+            System.out.print("  "+fl+" "+fr+" "+ft+" "+fb);
+            System.out.println("  "+fl1+" "+fr1+" "+ft1+" "+fb1);
+
         if (fw[finds] * 3 < fh[finds] * 2)
             return 0;
         if (fw[finds] * 2 > fh[finds] * 3)
             return 0;
-        if (0 != modwid) {
-            if (fw[finds] * 3 < modwid || fw[finds] > modwid)
+        if (0 != modwidx8) {
+            if (fw[finds] * 4 < modwidx8 || fw[finds] > modwidx8 / 2)
                 return 0;
-            if (fh[finds] * 3 < modwid || fh[finds] > modwid)
+            if (fh[finds] * 4 < modwidx8 || fh[finds] > modwidx8 / 2)
                 return 0;
             // for j==0  too could check lrtb for same width and trace out a square - already checked in scan direction but not perpindicular
-            if (fl * 2 > modwid || fr * 2 > modwid || ft * 2 > modwid || fb * 2 > modwid)
+            if (fl * 3 > modwidx8 || fr * 3 > modwidx8 || ft * 3 > modwidx8 || fb * 3 > modwidx8)
                 return 0;
-            if (fl1 * 2 > modwid || fr1 * 2 > modwid || ft1 * 2 > modwid || fb1 * 2 > modwid)
+            if (fl1 * 3 > modwidx8 || fr1 * 3 > modwidx8 || ft1 * 3 > modwidx8 || fb1 * 3 > modwidx8)
                 return 0;
+            finds++;
+            return 1;
         }
-        v = finds++;
-        return fw[v] + fh[v];
+
+        v = fw[finds] + fh[finds] + (ft + fb + fl + fr) / 2;
+        // thresholding unstable so maybe shut off
+        if (fl * 3 > v || fr * 3 > v || ft * 3 > v || fb * 3 > v)
+            return 0;
+        if (fl1 * 3 > v || fr1 * 3 > v || ft1 * 3 > v || fb1 * 3 > v)
+            return 0;
+        modwidx8 = v;
+        finds++;
+        return 1;
     }
 
     int runs[] = new int[8];
@@ -145,10 +159,10 @@ public class QuickFinderFinder extends Component {
         if ((b + d) * 2 < (a + e))
             return 0;
         c = runs[3];
-        if (0 != modwid) {
-            if (c * 14 < modwid * 5)
+        if (0 != modwidx8) {
+            if (c * 10 < modwidx8 * 3)
                 return 0;
-            if (c * 10 > modwid * 7)
+            if (c * 6 > modwidx8 * 3)
                 return 0;
         }
         m = a + e + (b + d + 1) / 2;
@@ -204,8 +218,8 @@ public class QuickFinderFinder extends Component {
                 if (0 == checkfinder())
                     continue;
                 xx = x - runs[5] - runs[4] - (runs[3] / 2);
-                modwid = center(xx, y - xx, ave);
-                if (0 != modwid)
+                center(xx, y - xx, ave);
+                if (0 != modwidx8)
                     return 1;
             }
         }
@@ -244,7 +258,7 @@ public class QuickFinderFinder extends Component {
             }
             if (i < 6)
                 continue;
-            if (runs[1] * 8 < modwid || runs[1] * 4 > modwid)
+            if (runs[1] * 10 < modwidx8 || runs[1] * 6 > modwidx8)
                 continue;
             if (0 == checkfinder())
                 continue;
@@ -285,7 +299,7 @@ public class QuickFinderFinder extends Component {
             }
             if (i < 6)
                 continue;
-            if (runs[1] * 8 < modwid || runs[1] * 4 > modwid)
+            if (runs[1] * 10 < modwidx8 || runs[1] * 6 > modwidx8)
                 continue;
             if (0 == checkfinder())
                 continue;
@@ -294,7 +308,7 @@ public class QuickFinderFinder extends Component {
         return;
     }
 
-    int TEST(int x,int y) { return (x*y/modwid); }
+    int TEST(int x,int y) { return (x*y/modwidx8); }
 
     void findfinders() {
 
@@ -310,7 +324,6 @@ public class QuickFinderFinder extends Component {
 
             //        System.out.println("Found2:" + finds);
             int i,j;
-
 
             j = finds;
             i = 1;
@@ -338,7 +351,7 @@ public class QuickFinderFinder extends Component {
 
             for (i = 0; i < finds - 1; i++)
                 for (j = i + 1; j < finds; j++)
-                    if (iabs(fx[i] - fx[j]) < modwid / 2 && iabs(fy[i] - fy[j]) < modwid / 2) {     // coincident centers
+                    if (iabs(fx[i] - fx[j]) < modwidx8 / 2 && iabs(fy[i] - fy[j]) < modwidx8 / 2) {     // coincident centers
                         //                fprintf(stderr, "DUP - %d,%d %d %d\n", fx[i], fy[i], fw[i], fh[i]);
                         if (j < finds - 1) {
                             fx[j] = fx[finds - 1];
@@ -373,26 +386,29 @@ public class QuickFinderFinder extends Component {
                         }
                         //                    fprintf(stderr, "A %d %d = %d\n", i, j, k);
                     }
-
             }
-
 
             // pick most likely 3
             for (i = 0; i < finds; i++) {
                 //            fprintf(stderr, "%d : %d,%d %d %d\n", (i == 0 || i == besti || i == bestj), fx[i], fy[i], fw[i], fh[i]);
                 System.out.println(i+":"+fx[i]+":"+fy[i]+":"+fw[i]+":"+fh[i]);
-                if(i == 0 || i == besti || i == bestj) {
+                if( finds > 2 && (i == 0 || i == besti || i == bestj) ) {
 
-                    // ONE OF THE FOUND
-
-                    //MARK FOUND
+                    // Mark Found Finder
                     for (j = 0; j < fw[i]; j++)
-                        img.setRGB(  fx[i] - fw[i] / 2 + j , fy[i], 255<<8 );
+                        img.setRGB( fx[i] - fw[i] / 2 + j, fy[i], img.getRGB(fx[i] - fw[i] / 2 + j, fy[i]) | (255<<8) );
                     for (j = 0; j < fh[i]; j++)
-                        img.setRGB(  fx[i], fy[i] - fh[i] / 2 + j , 255<<16 );
+                        img.setRGB( fx[i], fy[i] - fh[i] / 2 + j, img.getRGB( fx[i], fy[i] - fh[i] / 2 + j) | (255<<8) );
+                }
+                else {
+                    for (j = 0; j < 3; j++)
+                        img.setRGB( fx[i] - 1 + j, fy[i], img.getRGB( fx[i] - 1 + j, fy[i]) | (255<<16) );
+                    for (j = 0; j < 3; j++)
+                        img.setRGB( fx[i], fy[i] - 1 + j, img.getRGB( fx[i], fy[i] - 1 + j) | (255<<16) );
                 }
             }
 
+            // try harder at next diagonal
             if( finds > 2 )
                 break;
         }
