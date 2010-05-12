@@ -31,37 +31,71 @@ unsigned char jpeg0[] = {
 #include "qrencode.h"
 
 #include <string.h>
+#include <stdlib.h>
+
 int main(int argc, char *argv[])
 {
-    unsigned char x, y;
+    unsigned char x, y, v = 0, l = 1;
     char *c;
     unsigned width, height, j, k;
-    width = height = WD;
+    int argp = 0;
 
-    c = "Hello from HarleyHacking";
-    if( argc > 1 )
-        c = argv[1];
+    if( argc < 2 ) {
+        printf( "Usage:\n\nqrjpeg [-v VERS_1_40] [-l ECCLVL_1_4] \"text to encode\" >output.jpg\n" );
+        printf( "version defaults to auto, same as \"-v 0\"\necc level defaults to 1\n" );
+        return 1;
+    }
+    c = "Test Message";
 
-    k = initeccsize( 1, strlen(c));
-    fprintf( stderr, "%d bytes %d\n'", strlen(c), k );
+    while( ++argp < argc ) {
+        if( argv[argp][0] == '-' ) {
+            if( argv[argp][1] == 'v' )
+                v = atoi( argv[++argp]);
+            else if( argv[argp][1] == 'l' )
+                l = atoi( argv[++argp]);
+            else {
+                printf( "Usage:\n\nqrjpeg [-v VERS_1_40] [-l ECCLVL_1_4] \"text to encode\" >output.jpg\n" );
+                printf( "version defaults to auto, same as \"-v 0\"\necc level defaults to 1\n" );
+                return 1;
+            }
+        }
+        else
+            c = argv[argp];
+    }
+    if( v > 40 ) {
+        fprintf( stderr, "Bad version (size) parameter (should be 0 (auto) to 40)\n" );
+        return -1;
+    }
+    if( l < 1 || l > 4 ) {
+        fprintf( stderr, "Bad ECC level parameter (should be 1 to 4)\n" );
+        return -1;
+    }
+
+    if( v )
+        k = initecc(l, v);
+    else
+        k = initeccsize( l, strlen(c));
+
     initframe();
     strcpy((char *)strinbuf, c );
     qrencode();
+
+    width = height = WD+8;
     // set height and width in header
-    jpeg0[0x5e] = WD >> 5;
-    jpeg0[0x5f] = WD << 3;
-    jpeg0[0x60] = WD >> 5;
-    jpeg0[0x61] = WD << 3;
+    jpeg0[0x5e] = width >> 5;
+    jpeg0[0x5f] = width << 3;
+    jpeg0[0x60] = width >> 5;
+    jpeg0[0x61] = width << 3;
     // write out header
     fwrite(jpeg0, 1, sizeof(jpeg0), stdout);
     // put half full scale, 3e for white, 40 for black
-    k = j = QRBIT(0,0);
-    putchar(j ? 0x3e : 0x40);
-    for (y = 0; y < WD; y++) 
+    putchar(0x40);
+    for (j = 0; j < width * 4 + 3; j++) 
+        putchar(0x80);
+    for (y = 0; y < WD; y++)  {
+        k = 0;
         for (x = 0; x < WD; x++)  {
-            if( x+y== 0)
-                continue;
-            j = QRBIT(x,y);
+            j = QRBIT(x, y);
             if (k == j) {
                 putchar(0x80);      // code for no change
                 continue;
@@ -69,6 +103,15 @@ int main(int argc, char *argv[])
             putchar(j ? 0 : 0x7e);   // full scale flip
             k = j;
         }
+        if (k != 0)
+            putchar(0x7e);
+        else
+            putchar(0x80);
+        for (j = 0; j < 7; j++) 
+            putchar(0x80);
+    }
+    for (j = 0; j < width * 4 - 4; j++) 
+        putchar(0x80);
     putchar(0x80);              // one last for EOF
     putchar(0xFF);              // end marker
     putchar(0xd9);

@@ -26,6 +26,7 @@ int main(int argc, char **argv)
     initframe();
     qrencode();
 
+
     /* data */
 #ifdef PAD
     printf("P1\n%d %d\n", WD + 8, WD + 8);
