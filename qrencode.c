@@ -244,9 +244,8 @@ static void fillframe(void)
     for (i = 0; i < ((datablkw + eccblkwid) * (neccblk1 + neccblk2) + neccblk2); i++) {
         d = strinbuf[i];
         for (j = 0; j < 8; j++, d <<= 1) {
-            if (0x80 & d)
-                SETQRBIT(x, y);
-            do {                // find next fill position
+            if( i || j )
+              do {                // find next fill position
                 if (ffgohv)
                     x--;
                 else {
@@ -277,6 +276,8 @@ static void fillframe(void)
                 }
                 ffgohv = !ffgohv;
             } while (ismasked(x, y));
+            if (0x80 & d)
+                SETQRBIT(x, y);
         }
     }
 
