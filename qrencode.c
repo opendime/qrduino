@@ -8,7 +8,7 @@ extern unsigned char datablkw;
 extern unsigned char eccblkwid;
 extern unsigned char VERSION;
 extern unsigned char ECCLEVEL;
-extern unsigned char WD, WDB;
+//extern unsigned char WD, WDB;
 #ifndef USEPRECALC
 // These are malloced by initframe
 extern unsigned char *rlens;
@@ -231,7 +231,7 @@ static unsigned char ismasked(unsigned char x, unsigned char y)
 
 static void fillframe(void)
 {
-    unsigned i;
+    int i;
     unsigned char d, j;
     unsigned char x, y, ffdecy, ffgohv;
 
@@ -402,7 +402,7 @@ static unsigned badruns(unsigned char length)
     return runsbad;
 }
 
-static int badcheck()
+static int badcheck(void)
 {
     unsigned char x, y, h, b, b1;
     unsigned thisbad = 0;
@@ -458,7 +458,7 @@ static int badcheck()
 
 // final format bits with mask
 // level << 3 | mask
-static const unsigned fmtword[] PROGMEM = {
+static const unsigned short fmtword[] PROGMEM = {
     0x77c4, 0x72f3, 0x7daa, 0x789d, 0x662f, 0x6318, 0x6c41, 0x6976,     //L
     0x5412, 0x5125, 0x5e7c, 0x5b4b, 0x45f9, 0x40ce, 0x4f97, 0x4aa0,     //M
     0x355f, 0x3068, 0x3f31, 0x3a06, 0x24b4, 0x2183, 0x2eda, 0x2bed,     //Q
